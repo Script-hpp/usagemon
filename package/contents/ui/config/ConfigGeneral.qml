@@ -11,6 +11,26 @@ Kirigami.FormLayout {
     property alias cfg_warnThreshold: warnThresholdSpin.value
     property alias cfg_criticalThreshold: criticalThresholdSpin.value
     property alias cfg_widePopup: widePopupCheck.checked
+    property alias cfg_dataSourceMode: sourceCombo.currentIndex
+
+    QQC2.ComboBox {
+        id: sourceCombo
+        Kirigami.FormData.label: i18n("Data source:")
+        model: [
+            i18n("Automatic (OAuth API, then CLI)"),
+            i18n("OAuth API only"),
+            i18n("Terminal / CLI only (claude -p /usage)")
+        ]
+    }
+
+    QQC2.Label {
+        Kirigami.FormData.label: ""
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 18
+        wrapMode: Text.WordWrap
+        opacity: 0.7
+        font: Kirigami.Theme.smallFont
+        text: i18n("OAuth API reuses your existing local Claude Code login — the token is read locally and sent only to api.anthropic.com, never stored. CLI runs the claude command instead.")
+    }
 
     QQC2.TextField {
         id: claudeCommandField
@@ -27,9 +47,9 @@ Kirigami.FormLayout {
     QQC2.SpinBox {
         id: pollIntervalSpin
         Kirigami.FormData.label: i18n("Poll interval (seconds):")
-        from: 10
+        from: 60
         to: 3600
-        stepSize: 10
+        stepSize: 30
     }
 
     QQC2.SpinBox {

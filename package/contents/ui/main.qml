@@ -6,6 +6,7 @@ import org.kde.plasma.components as PlasmaComponents3
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasma5support as P5Support
 import "UsageParser.js" as UsageParser
+import "UsageApi.js" as UsageApi
 
 PlasmoidItem {
     id: root
@@ -18,6 +19,13 @@ PlasmoidItem {
     property string lastError: ""
     property string lastUpdated: ""
     property string activeModel: ""
+    property string dataSource: ""   // "api" or "cli" — which source last succeeded
+    property bool triedCliFallback: false
+    property string pendingApiError: ""
+
+    // Path to the bundled fetch script (reads the local OAuth token and calls
+    // the usage API in a subprocess; the token never enters this QML).
+    readonly property string fetchScript: Qt.resolvedUrl("fetch-usage.sh").toString().replace(/^file:\/\//, "")
 
     function prettyModel(raw) {
         if (!raw || raw.length === 0) return ""
@@ -111,26 +119,60 @@ PlasmoidItem {
                 return
             }
 
+            // Primary source: the OAuth usage API (via the bundled fetch script).
+            if (sourceName.indexOf("fetch-usage") !== -1) {
+                const apiParsed = UsageApi.parseUsage(stdout)
+                if (apiParsed.ok) {
+                    root.applyUsage(apiParsed, "api")
+                    root.busy = false
+                    return
+                }
+                root.pendingApiError = apiParsed.error || ""
+                // API unavailable (rate limited, no token, network) — in Auto
+                // mode, fall back to the CLI once before giving up this cycle.
+                if (root.sourceMode === 0 && !root.triedCliFallback) {
+                    root.triedCliFallback = true
+                    executable.exec(root.cliCommand())
+                    return   // keep busy until the CLI result arrives
+                }
+                root.busy = false
+                if (!root.usage.ok) {
+                    root.lastError = apiParsed.error || i18n("Usage unavailable")
+                }
+                scheduleRetry()
+                return
+            }
+
+            // Fallback source: `claude -p /usage`.
             root.busy = false
             const exitCode = data["exit code"]
             const stderr = (data["stderr"] || "").toString()
 
             if (exitCode !== 0 && stdout.trim().length === 0) {
-                root.lastError = stderr.trim().length > 0
-                    ? stderr.trim()
-                    : i18n("claude exited with code %1", exitCode)
+                if (!root.usage.ok) {
+                    root.lastError = stderr.trim().length > 0
+                        ? stderr.trim()
+                        : i18n("claude exited with code %1", exitCode)
+                }
+                scheduleRetry()
                 return
             }
 
             const parsed = UsageParser.parseUsage(stdout)
             if (!parsed.ok) {
-                root.lastError = parsed.error || i18n("Could not parse usage output")
+                // Keep the last good values instead of wiping them, and retry.
+                if (!root.usage.ok) {
+                    // Prefer the (more informative) API error if we have one,
+                    // e.g. "Rate limited" rather than the vague CLI message.
+                    root.lastError = root.pendingApiError.length > 0
+                        ? root.pendingApiError
+                        : (parsed.error || i18n("Could not parse usage output"))
+                }
+                scheduleRetry()
                 return
             }
 
-            root.lastError = ""
-            root.usage = parsed
-            root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
+            root.applyUsage(parsed, "cli")
         }
 
         function exec(cmd) {
@@ -138,21 +180,60 @@ PlasmoidItem {
         }
     }
 
+    // Login shell so we pick up a `claude` installed in ~/.local/bin etc.
+    function cliCommand() {
+        const command = plasmoid.configuration.claudeCommand || "claude"
+        return "bash -lc " + JSON.stringify(command + " -p /usage")
+    }
+
+    function applyUsage(parsed, source) {
+        root.lastError = ""
+        root.pendingApiError = ""
+        root.usage = parsed
+        root.dataSource = source
+        root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
+    }
+
+    // 0 = Auto (API, then CLI), 1 = OAuth API only, 2 = CLI only
+    readonly property int sourceMode: plasmoid.configuration.dataSourceMode
+
     function refresh() {
         if (root.busy) return
         root.busy = true
-        const command = plasmoid.configuration.claudeCommand || "claude"
-        // Run inside a login shell: plasmashell doesn't inherit the PATH set up
-        // in ~/.bash_profile or ~/.zshrc, where user-installed CLIs often live
-        // (e.g. ~/.local/bin).
-        executable.exec("bash -lc " + JSON.stringify(command + " -p /usage"))
+        root.triedCliFallback = false
+        if (sourceMode === 2) {
+            // CLI only.
+            executable.exec(cliCommand())
+        } else {
+            // Auto or API-only: OAuth usage API via the bundled fetch script.
+            executable.exec("bash " + JSON.stringify(root.fetchScript))
+        }
         // Read the configured model from Claude Code's settings (best effort).
         executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.claude/settings.json\""))
     }
 
+    // The usage endpoint is rate-limited (both the API and the CLI hit the same
+    // one), so hammering it just yields 429s / empty bodies. Only retry sooner
+    // than the normal interval when we have nothing to show at all (e.g. right
+    // after startup), and not too aggressively.
+    function scheduleRetry() {
+        if (root.usage.ok) return
+        if (retryTimer.running) return
+        retryTimer.start()
+    }
+
+    Timer {
+        id: retryTimer
+        interval: 60000
+        repeat: false
+        onTriggered: root.refresh()
+    }
+
     Timer {
         id: pollTimer
-        interval: Math.max(10, plasmoid.configuration.pollIntervalSeconds) * 1000
+        // Minimum 60s — the source rate-limits, so faster polling is
+        // counterproductive (the numbers change slowly anyway).
+        interval: Math.max(60, plasmoid.configuration.pollIntervalSeconds) * 1000
         running: true
         repeat: true
         triggeredOnStart: true
