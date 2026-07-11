@@ -22,10 +22,14 @@ in your panel. Click it for a popup with the full breakdown and reset times.
 - **Panel readout**: session and week usage side by side (e.g. `29% · 36%`),
   each preceded by its own Breeze icon — a stopwatch for the session limit and
   a week-calendar for the weekly limit.
-- **Threshold colors**: the percentages and icons turn from green → yellow → red
-  as usage crosses configurable warning and critical thresholds.
+- **Severity colors**: the percentages and icons turn from green → yellow → red.
+  When the OAuth API is used, this follows the API's own `severity` for each
+  limit; otherwise it falls back to configurable warning/critical thresholds.
 - **Detail popup**: per-limit progress bars (session, week, plus any extra limits
-  such as a per-model weekly limit) with reset times.
+  such as a per-model weekly limit) with reset times shown both as a live
+  countdown and the absolute time (e.g. `resets in 2h 14m · Jul 11, 5:59pm`).
+- **Notifications**: optional desktop notification when a limit crosses a
+  configurable threshold (default 90%).
 - **Active model**: reads your configured model from `~/.claude/settings.json`
   and shows it in the popup header and tooltip.
 - **Auto refresh** on a configurable interval, plus manual refresh
@@ -63,8 +67,10 @@ Right-click the widget → **Configure usagemon…** → **General**:
 | Data source | Automatic | `Automatic` (OAuth API, then CLI), `OAuth API only`, or `CLI only` |
 | Claude command | `claude` | Path/name of the `claude` binary (used by the CLI source) |
 | Poll interval (seconds) | `120` | How often to refresh (min 60 — the source is rate-limited) |
-| Warn threshold (%) | `75` | Usage at which the readout turns yellow |
-| Critical threshold (%) | `90` | Usage at which the readout turns red |
+| Warn threshold (%) | `75` | Usage at which the readout turns yellow (when no API severity) |
+| Critical threshold (%) | `90` | Usage at which the readout turns red (when no API severity) |
+| Notifications | on | Notify when a limit is high |
+| Notify threshold (%) | `90` | Usage at which a notification fires |
 | Wider layout | off | Widen the popup and show the full reset time |
 
 ## How it works

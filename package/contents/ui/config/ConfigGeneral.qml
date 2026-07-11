@@ -12,6 +12,8 @@ Kirigami.FormLayout {
     property alias cfg_criticalThreshold: criticalThresholdSpin.value
     property alias cfg_widePopup: widePopupCheck.checked
     property alias cfg_dataSourceMode: sourceCombo.currentIndex
+    property alias cfg_notificationsEnabled: notifyCheck.checked
+    property alias cfg_notifyThreshold: notifyThresholdSpin.value
 
     QQC2.ComboBox {
         id: sourceCombo
@@ -62,6 +64,20 @@ Kirigami.FormLayout {
     QQC2.SpinBox {
         id: criticalThresholdSpin
         Kirigami.FormData.label: i18n("Critical threshold (%):")
+        from: 1
+        to: 100
+    }
+
+    QQC2.CheckBox {
+        id: notifyCheck
+        Kirigami.FormData.label: i18n("Notifications:")
+        text: i18n("Notify when a limit is high")
+    }
+
+    QQC2.SpinBox {
+        id: notifyThresholdSpin
+        Kirigami.FormData.label: i18n("Notify threshold (%):")
+        enabled: notifyCheck.checked
         from: 1
         to: 100
     }

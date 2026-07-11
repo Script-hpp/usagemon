@@ -5,6 +5,7 @@ import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasma5support as P5Support
+import org.kde.notification
 import "UsageParser.js" as UsageParser
 import "UsageApi.js" as UsageApi
 
@@ -22,6 +23,7 @@ PlasmoidItem {
     property string dataSource: ""   // "api" or "cli" — which source last succeeded
     property bool triedCliFallback: false
     property string pendingApiError: ""
+    property bool notifiedOver: false   // already notified for the current over-threshold state
 
     // Path to the bundled fetch script (reads the local OAuth token and calls
     // the usage API in a subprocess; the token never enters this QML).
@@ -44,19 +46,56 @@ PlasmoidItem {
     readonly property int warnThreshold: plasmoid.configuration.warnThreshold
     readonly property int criticalThreshold: plasmoid.configuration.criticalThreshold
 
+    // Live clock so reset countdowns tick down without a full data refresh.
+    property double nowMs: Date.now()
+
+    // All limits as a flat list (each has percent + severity).
+    function allEntries() {
+        let e = []
+        if (usage.session) e.push(usage.session)
+        if (usage.week) e.push(usage.week)
+        usage.extraLimits.forEach(x => e.push(x))
+        return e
+    }
+
+    // Colour level: 0 = ok/green, 1 = warn/yellow, 2 = critical/red.
+    // Prefer the API's own severity when present; otherwise use thresholds.
+    function limitLevel(percent, severity) {
+        if (severity && severity.length > 0) {
+            if (severity === "normal" || severity === "ok") return 0
+            if (severity === "warning" || severity === "warn" || severity === "approaching") return 1
+            return 2   // critical / exceeded / anything more severe
+        }
+        if (percent >= criticalThreshold) return 2
+        if (percent >= warnThreshold) return 1
+        return 0
+    }
+
+    function levelColor(level) {
+        if (level >= 2) return Kirigami.Theme.negativeTextColor
+        if (level === 1) return Kirigami.Theme.neutralTextColor
+        return Kirigami.Theme.positiveTextColor
+    }
+
+    function limitColor(percent, severity) {
+        return levelColor(limitLevel(percent, severity))
+    }
+
     readonly property int highestPercent: {
-        let values = []
-        if (usage.session) values.push(usage.session.percent)
-        if (usage.week) values.push(usage.week.percent)
-        usage.extraLimits.forEach(e => values.push(e.percent))
+        let values = allEntries().map(e => e.percent)
         return values.length > 0 ? Math.max(...values) : -1
     }
 
+    // Overall panel colour = the worst (most severe) of all limits.
     readonly property color usageColor: {
-        if (highestPercent < 0) return Kirigami.Theme.disabledTextColor
-        if (highestPercent >= criticalThreshold) return Kirigami.Theme.negativeTextColor
-        if (highestPercent >= warnThreshold) return Kirigami.Theme.neutralTextColor
-        return Kirigami.Theme.positiveTextColor
+        let entries = allEntries()
+        if (entries.length === 0) return Kirigami.Theme.disabledTextColor
+        let worst = 0
+        entries.forEach(e => {
+            let lvl = limitLevel(e.percent, e.severity || "")
+            if (lvl > worst) worst = lvl
+        })
+        return levelColor(worst)
     }
 
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
@@ -192,6 +231,39 @@ PlasmoidItem {
         root.usage = parsed
         root.dataSource = source
         root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
+        root.checkNotifications()
+    }
+
+    // Fire a desktop notification the first time a limit crosses the notify
+    // threshold; reset once everything is back below it (so we notify once per
+    // crossing, not every poll).
+    function checkNotifications() {
+        if (!plasmoid.configuration.notificationsEnabled) return
+        const threshold = plasmoid.configuration.notifyThreshold
+        let over = root.allEntries().filter(e => e.percent >= threshold)
+        if (over.length === 0) {
+            root.notifiedOver = false
+            return
+        }
+        if (root.notifiedOver) return
+        root.notifiedOver = true
+
+        let parts = over.map(e => {
+            let name = e.label === "session" ? i18n("Session")
+                     : (e.label === "week (all models)" ? i18n("Week") : e.label)
+            return i18n("%1 %2%", name, e.percent)
+        })
+        usageNotification.text = i18n("Usage at or above %1%: %2", threshold, parts.join(", "))
+        usageNotification.sendEvent()
+    }
+
+    Notification {
+        id: usageNotification
+        componentName: "plasma_workspace"
+        eventId: "notification"
+        title: i18n("Claude usage high")
+        iconName: "utilities-system-monitor"
+        urgency: Notification.NormalUrgency
     }
 
     // 0 = Auto (API, then CLI), 1 = OAuth API only, 2 = CLI only
@@ -227,6 +299,15 @@ PlasmoidItem {
         interval: 60000
         repeat: false
         onTriggered: root.refresh()
+    }
+
+    // Advances the reset countdowns between data refreshes.
+    Timer {
+        interval: 30000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.nowMs = Date.now()
     }
 
     Timer {

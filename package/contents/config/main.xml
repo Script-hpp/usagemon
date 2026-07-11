@@ -15,6 +15,12 @@
         <entry name="dataSourceMode" type="Int">
             <default>0</default>
         </entry>
+        <entry name="notificationsEnabled" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="notifyThreshold" type="Int">
+            <default>90</default>
+        </entry>
         <entry name="warnThreshold" type="Int">
             <default>75</default>
         </entry>

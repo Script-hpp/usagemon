@@ -46,7 +46,12 @@ function parseUsage(text) {
         const entry = {
             label: match[1].trim(),
             percent: parseInt(match[2], 10),
-            resets: match[3] ? match[3].trim() : ""
+            resets: match[3] ? match[3].trim() : "",
+            // The CLI text output carries no severity or machine-readable reset
+            // timestamp, so colors fall back to thresholds and there is no
+            // live countdown for this source.
+            severity: "",
+            resetsAt: 0
         };
 
         if (entry.label === "session") {

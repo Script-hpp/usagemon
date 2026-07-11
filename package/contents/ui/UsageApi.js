@@ -70,9 +70,13 @@ function parseUsage(jsonText) {
         if (l === null || typeof l !== "object" || typeof l.percent !== "number") {
             continue;
         }
+        var resetsAt = l.resets_at ? Date.parse(l.resets_at) : 0;
+        if (isNaN(resetsAt)) resetsAt = 0;
         var entry = {
             percent: Math.round(l.percent),
-            resets: formatReset(l.resets_at)
+            resets: formatReset(l.resets_at),
+            resetsAt: resetsAt,
+            severity: (typeof l.severity === "string") ? l.severity : ""
         };
 
         if (l.kind === "session") {

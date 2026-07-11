@@ -15,20 +15,16 @@ ColumnLayout {
     Layout.maximumWidth: Kirigami.Units.gridUnit * (wide ? 26 : 13)
     spacing: Kirigami.Units.smallSpacing
 
-    function colorFor(percent) {
-        if (percent >= root.criticalThreshold) return Kirigami.Theme.negativeTextColor
-        if (percent >= root.warnThreshold) return Kirigami.Theme.neutralTextColor
-        return Kirigami.Theme.positiveTextColor
-    }
-
     // Single flat list of every limit, so session/week/extra all render
     // through one identical delegate — no per-item special casing.
     readonly property var limits: {
         if (!root.usage.ok) return []
+        let mk = (label, e) => ({ label: label, percent: e.percent, resets: e.resets,
+                                  resetsAt: e.resetsAt || 0, severity: e.severity || "" })
         let out = []
-        if (root.usage.session) out.push({ label: i18n("Session"), percent: root.usage.session.percent, resets: root.usage.session.resets })
-        if (root.usage.week) out.push({ label: i18n("Week"), percent: root.usage.week.percent, resets: root.usage.week.resets })
-        root.usage.extraLimits.forEach(e => out.push({ label: e.label, percent: e.percent, resets: e.resets }))
+        if (root.usage.session) out.push(mk(i18n("Session"), root.usage.session))
+        if (root.usage.week) out.push(mk(i18n("Week"), root.usage.week))
+        root.usage.extraLimits.forEach(e => out.push(mk(e.label, e)))
         return out
     }
 
@@ -99,8 +95,10 @@ ColumnLayout {
             label: modelData.label
             percent: modelData.percent
             resets: modelData.resets
+            resetsAt: modelData.resetsAt
+            nowMs: root.nowMs
             fullResets: full.wide
-            accentColor: full.colorFor(modelData.percent)
+            accentColor: root.limitColor(modelData.percent, modelData.severity)
         }
     }
 

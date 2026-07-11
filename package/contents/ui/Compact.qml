@@ -11,10 +11,8 @@ Item {
     readonly property bool horizontal: root.horizontal
     readonly property bool hasData: root.usage.ok && root.lastError.length === 0
 
-    function colorFor(percent) {
-        if (percent >= root.criticalThreshold) return Kirigami.Theme.negativeTextColor
-        if (percent >= root.warnThreshold) return Kirigami.Theme.neutralTextColor
-        return Kirigami.Theme.positiveTextColor
+    function entryColor(entry) {
+        return entry ? root.limitColor(entry.percent, entry.severity || "") : Kirigami.Theme.disabledTextColor
     }
 
     Layout.preferredWidth: horizontal ? row.implicitWidth + Kirigami.Units.smallSpacing * 3 : Kirigami.Units.iconSizes.medium
@@ -74,11 +72,11 @@ Item {
                 source: "chronometer-symbolic"
                 Layout.preferredWidth: Kirigami.Units.iconSizes.small
                 Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                color: compact.colorFor(root.usage.session ? root.usage.session.percent : 0)
+                color: compact.entryColor(root.usage.session)
             }
             PlasmaComponents3.Label {
                 text: (root.usage.session ? root.usage.session.percent : 0) + "%"
-                color: compact.colorFor(root.usage.session ? root.usage.session.percent : 0)
+                color: compact.entryColor(root.usage.session)
                 font.bold: true
             }
         }
@@ -97,11 +95,11 @@ Item {
                 source: "view-calendar-week-symbolic"
                 Layout.preferredWidth: Kirigami.Units.iconSizes.small
                 Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                color: compact.colorFor(root.usage.week ? root.usage.week.percent : 0)
+                color: compact.entryColor(root.usage.week)
             }
             PlasmaComponents3.Label {
                 text: (root.usage.week ? root.usage.week.percent : 0) + "%"
-                color: compact.colorFor(root.usage.week ? root.usage.week.percent : 0)
+                color: compact.entryColor(root.usage.week)
                 font.bold: true
             }
         }

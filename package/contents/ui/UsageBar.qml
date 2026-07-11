@@ -9,12 +9,34 @@ ColumnLayout {
     property string label: ""
     property int percent: 0
     property string resets: ""
+    property double resetsAt: 0   // epoch ms; 0 = unknown (no live countdown)
+    property double nowMs: 0
     property bool fullResets: false
     property color accentColor: Kirigami.Theme.positiveTextColor
 
     // In the compact popup, drop the trailing "(Timezone)" to keep the line
     // short; in the wide popup, keep the full reset string.
     readonly property string shortResets: fullResets ? resets : resets.replace(/\s*\(.*\)\s*$/, "")
+
+    // "in 2h 14m" / "in 3d 4h" / "in 12m". Recomputed whenever nowMs ticks.
+    readonly property string countdown: {
+        void nowMs   // depend on the clock so this re-evaluates each tick
+        if (resetsAt <= 0) return ""
+        let diff = resetsAt - (nowMs > 0 ? nowMs : Date.now())
+        if (diff <= 0) return i18n("soon")
+        let mins = Math.floor(diff / 60000)
+        let d = Math.floor(mins / 1440); mins -= d * 1440
+        let h = Math.floor(mins / 60); mins -= h * 60
+        if (d > 0) return i18n("%1d %2h", d, h)
+        if (h > 0) return i18n("%1h %2m", h, mins)
+        return i18n("%1m", mins)
+    }
+
+    readonly property string resetText: {
+        if (shortResets.length === 0) return ""
+        if (countdown.length > 0) return i18n("· resets in %1 · %2", countdown, shortResets)
+        return i18n("· resets %1", shortResets)
+    }
 
     Layout.fillWidth: true
     spacing: 2
@@ -38,8 +60,8 @@ ColumnLayout {
         }
 
         PlasmaComponents3.Label {
-            visible: bar.shortResets.length > 0
-            text: i18n("· resets %1", bar.shortResets)
+            visible: bar.resetText.length > 0
+            text: bar.resetText
             color: Kirigami.Theme.disabledTextColor
             font: Kirigami.Theme.smallFont
             elide: Text.ElideRight
