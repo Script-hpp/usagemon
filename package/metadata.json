@@ -1,0 +1,20 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Script-hpp"
+            }
+        ],
+        "Description": "Shows Claude Code subscription usage (session/week limits) in your panel",
+        "BugReportUrl": "https://github.com/Script-hpp/usagemon/issues",
+        "Website": "https://github.com/Script-hpp/usagemon",
+        "Icon": "utilities-system-monitor",
+        "Id": "org.usagemon.claude-usage",
+        "License": "MIT",
+        "Name": "usagemon",
+        "Version": "0.1.0",
+        "Category": "System Information"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0.0"
+}
