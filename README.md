@@ -7,9 +7,15 @@ have to type `/usage` in a terminal every time.
 It reads your usage in the background and shows a compact, color-coded readout
 in your panel. Click it for a popup with the full breakdown and reset times.
 
-<!-- Add a screenshot at docs/screenshot.png and uncomment:
-![Panel readout and popup](docs/screenshot.png)
--->
+<p align="center">
+  <img src="images/usagemon_bar.png" alt="Panel readout" height="40">
+</p>
+
+<p align="center">
+  <img src="images/usagemon_status.png" alt="Usage popup" width="330">
+  &nbsp;&nbsp;
+  <img src="images/usagemon_status_wide.png" alt="Usage popup (wider layout)" width="380">
+</p>
 
 ## Features
 
