@@ -8,8 +8,8 @@
         <entry name="claudeCommand" type="String">
             <default>claude</default>
         </entry>
-        <entry name="pollIntervalMinutes" type="Int">
-            <default>5</default>
+        <entry name="pollIntervalSeconds" type="Int">
+            <default>30</default>
         </entry>
         <entry name="warnThreshold" type="Int">
             <default>75</default>

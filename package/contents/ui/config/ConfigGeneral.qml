@@ -7,7 +7,7 @@ Kirigami.FormLayout {
     id: page
 
     property alias cfg_claudeCommand: claudeCommandField.text
-    property alias cfg_pollIntervalMinutes: pollIntervalSpin.value
+    property alias cfg_pollIntervalSeconds: pollIntervalSpin.value
     property alias cfg_warnThreshold: warnThresholdSpin.value
     property alias cfg_criticalThreshold: criticalThresholdSpin.value
     property alias cfg_widePopup: widePopupCheck.checked
@@ -26,9 +26,10 @@ Kirigami.FormLayout {
 
     QQC2.SpinBox {
         id: pollIntervalSpin
-        Kirigami.FormData.label: i18n("Poll interval (minutes):")
-        from: 1
-        to: 120
+        Kirigami.FormData.label: i18n("Poll interval (seconds):")
+        from: 10
+        to: 3600
+        stepSize: 10
     }
 
     QQC2.SpinBox {

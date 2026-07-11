@@ -51,7 +51,7 @@ Right-click the widget → **Configure usagemon…** → **General**:
 | Option | Default | Description |
 | --- | --- | --- |
 | Claude command | `claude` | Path/name of the `claude` binary |
-| Poll interval (minutes) | `5` | How often to refresh |
+| Poll interval (seconds) | `30` | How often to refresh (min 10) |
 | Warn threshold (%) | `75` | Usage at which the readout turns yellow |
 | Critical threshold (%) | `90` | Usage at which the readout turns red |
 | Wider layout | off | Widen the popup and show the full reset time (incl. timezone) |
