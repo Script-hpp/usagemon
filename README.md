@@ -1,5 +1,7 @@
 # usagemon
 
+[![Available on the KDE Store](https://img.shields.io/badge/KDE%20Store-usagemon-blue)](https://store.kde.org/p/2365234/)
+
 A KDE Plasma 6 panel widget that shows your [Claude Code](https://claude.com/claude-code)
 subscription usage — session and weekly rate limits — at a glance, so you don't
 have to type `/usage` in a terminal every time.
@@ -14,8 +16,15 @@ in your panel. Click it for a popup with the full breakdown and reset times.
 <p align="center">
   <img src="images/usagemon_status.png" alt="Usage popup" width="330">
   &nbsp;&nbsp;
-  <img src="images/usagemon_status_wide.png" alt="Usage popup (wider layout)" width="380">
+  <img src="images/full_wide.png" alt="Usage popup (wider layout, with countdown + absolute reset time)" width="380">
 </p>
+
+<details>
+<summary>Settings dialog</summary>
+<p align="center">
+  <img src="images/settings.png" alt="usagemon settings dialog" width="600">
+</p>
+</details>
 
 ## Features
 
@@ -43,6 +52,12 @@ in your panel. Click it for a popup with the full breakdown and reset times.
   reuses that existing login — you don't authenticate separately.
 
 ## Install
+
+**Option A — from the KDE Store (easiest):** right-click your panel →
+**Add Widgets…** → **Get New Widgets…** → search for **usagemon** (or install
+it directly from [store.kde.org](https://store.kde.org/p/2365234/)).
+
+**Option B — from source:**
 
 ```sh
 git clone https://github.com/Script-hpp/usagemon.git
@@ -109,24 +124,22 @@ so polling faster than ~1/minute just yields errors — and the numbers (a 5-hou
 session window and a 7-day week window) change slowly anyway. The default is
 every 2 minutes; the minimum is 60 seconds.
 
-## Publishing / installing from the KDE Store
+## KDE Store
 
-Plasma widgets can be shared on the [KDE Store](https://store.kde.org) so anyone
-can install them from **Add Widgets… → Get New Widgets… → Download New Plasma
-Widgets** (the "Get Hot New Stuff" flow).
+usagemon is published on the KDE Store: **<https://store.kde.org/p/2365234/>**
 
-Build the uploadable archive with:
-
-```sh
-./build-plasmoid.sh    # produces usagemon-<version>.plasmoid
-```
-
-Then upload that `.plasmoid` file at <https://store.kde.org> under
-**Plasma 6 → Plasma Widgets** (requires a free opendesktop.org account). Once
-published, users can also install it directly:
+You can install it straight from there via **Add Widgets… → Get New Widgets…**
+in Plasma, or download the `.plasmoid` archive from that page and install it
+manually:
 
 ```sh
 kpackagetool6 --type Plasma/Applet --install usagemon-<version>.plasmoid
+```
+
+To build a new release archive yourself (e.g. after making changes):
+
+```sh
+./build-plasmoid.sh    # produces usagemon-<version>.plasmoid
 ```
 
 ## License
