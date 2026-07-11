@@ -32,10 +32,17 @@ ColumnLayout {
         return i18n("%1m", mins)
     }
 
+    // Narrow popup: just the live countdown (short, never truncated).
+    // Wide popup: countdown plus the absolute time.
     readonly property string resetText: {
-        if (shortResets.length === 0) return ""
-        if (countdown.length > 0) return i18n("· resets in %1 · %2", countdown, shortResets)
-        return i18n("· resets %1", shortResets)
+        void nowMs
+        if (countdown.length === 0) {
+            return shortResets.length > 0 ? i18n("· resets %1", shortResets) : ""
+        }
+        if (fullResets && shortResets.length > 0) {
+            return i18n("· resets in %1 · %2", countdown, shortResets)
+        }
+        return i18n("· resets in %1", countdown)
     }
 
     Layout.fillWidth: true
