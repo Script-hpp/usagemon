@@ -38,6 +38,21 @@ PlasmoidItem {
     // 0 = Claude Code, 1 = Cline
     readonly property int agentService: plasmoid.configuration.agentService
 
+    // Drop any stale numbers from the previous source so the panel never shows
+    // the other agent's limits after a settings switch.
+    function resetUsageState() {
+        root.usage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+        root.lastError = ""
+        root.activeModel = ""
+        root.notifiedOver = false
+        root.lastUpdated = ""
+    }
+
+    onAgentServiceChanged: {
+        root.resetUsageState()
+        root.refresh()
+    }
+
     function prettyModel(raw) {
         if (!raw || raw.length === 0) return ""
         // Short aliases like "opus"/"sonnet"/"haiku" -> capitalized.
@@ -312,6 +327,11 @@ PlasmoidItem {
 
     // 0 = Auto (API, then CLI), 1 = OAuth API only, 2 = CLI only
     readonly property int sourceMode: plasmoid.configuration.dataSourceMode
+
+    onSourceModeChanged: {
+        root.resetUsageState()
+        root.refresh()
+    }
 
     function refresh() {
         if (root.busy) return
