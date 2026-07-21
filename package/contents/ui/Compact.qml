@@ -11,24 +11,21 @@ Item {
     readonly property bool horizontal: root.horizontal
     readonly property bool hasData: root.usage.ok && root.lastError.length === 0
 
-    // Worst percent + color for a single usage object.
-    function worstPct(u) {
-        let pcts = []
-        if (u.session) pcts.push(u.session.percent)
-        if (u.week) pcts.push(u.week.percent)
-        if (u.extraLimits) u.extraLimits.forEach(x => pcts.push(x.percent))
-        return pcts.length > 0 ? Math.max(...pcts) : -1
+    // Session percent + color for a single usage object, falling back to
+    // week (then the first extra limit) when session isn't available. The
+    // panel is glanceable real estate: session is the number that changes
+    // fast enough to matter without expanding, so it takes priority over
+    // the slower-moving week figure.
+    function glancePct(u) {
+        if (u.session) return u.session.percent
+        if (u.week) return u.week.percent
+        if (u.extraLimits && u.extraLimits.length > 0) return u.extraLimits[0].percent
+        return -1
     }
-    function worstColor(u) {
-        let level = 0
-        function walk(e) {
-            if (!e) return
-            let l = root.limitLevel(e.percent, e.severity || "")
-            if (l > level) level = l
-        }
-        walk(u.session); walk(u.week)
-        if (u.extraLimits) u.extraLimits.forEach(walk)
-        return root.levelColor(level)
+    function glanceColor(u) {
+        let e = u.session || u.week || (u.extraLimits && u.extraLimits[0])
+        if (!e) return root.levelColor(0)
+        return root.levelColor(root.limitLevel(e.percent, e.severity || ""))
     }
 
     function hasGoodData(u) {
@@ -37,8 +34,8 @@ Item {
 
     // --- Both-mode layout: two labelled indicators side by side ----------
     readonly property bool bothMode: root.agentService === 2
-    readonly property int  claudePct: bothMode ? worstPct(root.claudeUsage) : -1
-    readonly property int  clinePct:  bothMode ? worstPct(root.clineUsage) : -1
+    readonly property int  claudePct: bothMode ? glancePct(root.claudeUsage) : -1
+    readonly property int  clinePct:  bothMode ? glancePct(root.clineUsage) : -1
     readonly property bool claudeOk: bothMode && hasGoodData(root.claudeUsage)
     readonly property bool clineOk:  bothMode && hasGoodData(root.clineUsage)
 
@@ -85,8 +82,8 @@ Item {
 
         Repeater {
             model: [
-                { label: "", icon: "../icons/anthropic.svg", pct: claudePct, ok: claudeOk, color: worstColor(root.claudeUsage), active: root.activeTab === 0 },
-                { label: "", icon: "../icons/cline.svg", pct: clinePct,  ok: clineOk,  color: worstColor(root.clineUsage),  active: root.activeTab === 1 }
+                { label: "", icon: "../icons/anthropic.svg", pct: claudePct, ok: claudeOk, color: glanceColor(root.claudeUsage), active: root.activeTab === 0 },
+                { label: "", icon: "../icons/cline.svg", pct: clinePct,  ok: clineOk,  color: glanceColor(root.clineUsage),  active: root.activeTab === 1 }
             ]
             delegate: RowLayout {
                 spacing: Kirigami.Units.smallSpacing / 2
