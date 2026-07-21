@@ -69,6 +69,7 @@ Item {
                 root.refresh()
             } else if (bothMode) {
                 root.activeTab = root.activeTab === 0 ? 1 : 0
+                if (!root.expanded) root.expanded = true
             } else {
                 root.expanded = !root.expanded
             }
@@ -91,12 +92,12 @@ Item {
                 spacing: Kirigami.Units.smallSpacing / 2
 
                 // Brand icon from Lobe Icons project (MIT, github.com/lobehub/lobe-icons).
-                // Uses fill="currentColor" so it inherits the severity colour.
-                Kirigami.Icon {
-                    source: modelData.icon
-                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                    Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                    color: modelData.ok ? modelData.color : Kirigami.Theme.disabledTextColor
+                // SVG renders as-is; the percentage label already carries the
+                // severity colour. The active tab icon is opaque, inactive is dimmed.
+                Image {
+                    source: Qt.resolvedUrl("../icons/" + (index === 0 ? "anthropic.svg" : "cline.svg"))
+                    sourceSize.width: Kirigami.Units.iconSizes.small
+                    sourceSize.height: Kirigami.Units.iconSizes.small
                     opacity: modelData.active ? 1 : 0.45
                 }
 
