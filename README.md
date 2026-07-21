@@ -4,7 +4,7 @@
 
 A KDE Plasma 6 panel widget that shows your [Claude Code](https://claude.com/claude-code),
 [Cline](https://cline.bot), or [Antigravity](https://antigravity.google/) (`agy`) subscription
-usage — session and weekly rate limits — at a glance, so you don't have to type
+usage (session and weekly rate limits) at a glance, so you don't have to type
 `/usage` in a terminal every time.
 
 It reads your usage in the background and shows a compact, color-coded readout
@@ -19,9 +19,7 @@ all three at once.
 </p>
 
 <p align="center">
-  <img src="images/usagemon_status.png" alt="Usage popup" width="330">
-  &nbsp;&nbsp;
-  <img src="images/full_wide.png" alt="Usage popup (wider layout, with countdown + absolute reset time)" width="380">
+  <img src="images/full_wide.png" alt="Claude Code usage popup (wider layout, with countdown + absolute reset time)" width="380">
 </p>
 
 <p align="center">
@@ -40,7 +38,7 @@ all three at once.
 ## Features
 
 - **Panel readout**: session and week usage side by side (e.g. `29% · 36%`),
-  each preceded by its own Breeze icon — a stopwatch for the session limit and
+  each preceded by its own Breeze icon: a stopwatch for the session limit and
   a week-calendar for the weekly limit.
 - **Severity colors**: the percentages and icons turn from green → yellow → red.
   When the OAuth API is used, this follows the API's own `severity` for each
@@ -52,8 +50,8 @@ all three at once.
 - **Notifications**: optional desktop notification when a limit crosses a
   configurable threshold (default 90%).
 - **Active model**: reads your configured model from `~/.claude/settings.json`
-  (or the active quota group for Antigravity) and shows it — with its brand
-  icon — in the popup header and tooltip.
+  (or the active quota group for Antigravity) and shows it, with its brand
+  icon, in the popup header and tooltip.
 - **All mode**: watch Claude Code, Cline, and Antigravity side by side. The
   panel shows one indicator per service; click it to cycle through their
   details in the popup.
@@ -65,17 +63,17 @@ all three at once.
 - KDE Plasma 6
 - [Claude Code](https://claude.com/claude-code), [Cline](https://cline.bot), and/or
   [Antigravity](https://antigravity.google/)'s `agy` CLI installed and logged in.
-  usagemon reuses that existing login — you don't authenticate separately.
+  usagemon reuses that existing login; you don't authenticate separately.
   Choose which one(s) to monitor in the widget settings. Antigravity also needs
   `lsof` on `PATH`.
 
 ## Install
 
-**Option A — from the KDE Store (easiest):** right-click your panel →
+**Option A (from the KDE Store, easiest):** right-click your panel →
 **Add Widgets…** → **Get New Widgets…** → search for **usagemon** (or install
 it directly from [store.kde.org](https://store.kde.org/p/2365234/)).
 
-**Option B — from source:**
+**Option B (from source):**
 
 ```sh
 git clone https://github.com/Script-hpp/usagemon.git
@@ -99,9 +97,9 @@ Right-click the widget → **Configure usagemon…** → **General**:
 | Option | Default | Description |
 | --- | --- | --- |
 | Agent / Service | `Claude Code` | Which agent's usage to monitor: `Claude Code`, `Cline`, `Antigravity`, or `All` (all three side by side) |
-| Data source | Automatic | `Automatic` (OAuth API, then CLI), `OAuth API only`, or `CLI only` *(Claude Code only — Cline and Antigravity are API-only)* |
+| Data source | Automatic | `Automatic` (OAuth API, then CLI), `OAuth API only`, or `CLI only` *(Claude Code only; Cline and Antigravity are API-only)* |
 | Claude command | `claude` | Path/name of the `claude` binary (used by the CLI source) |
-| Poll interval (seconds) | `120` | How often to refresh (min 60 — the source is rate-limited) |
+| Poll interval (seconds) | `120` | How often to refresh (min 60; the source is rate-limited) |
 | Warn threshold (%) | `75` | Usage at which the readout turns yellow (when no API severity) |
 | Critical threshold (%) | `90` | Usage at which the readout turns red (when no API severity) |
 | Notifications | on | Notify when a limit is high |
@@ -117,7 +115,7 @@ two-tier, **privacy-first** approach:
 1. **OAuth API (primary).** A small bundled script
    ([`fetch-usage.sh`](package/contents/ui/fetch-usage.sh)) reads the OAuth
    access token from Claude Code's own credentials file and calls
-   `GET https://api.anthropic.com/api/oauth/usage` — the exact endpoint the
+   `GET https://api.anthropic.com/api/oauth/usage`, the exact endpoint the
    `claude` CLI uses internally. The JSON response is parsed in
    [`UsageApi.js`](package/contents/ui/UsageApi.js).
 2. **CLI (fallback).** If the API is unavailable (no token, offline, rate
@@ -135,7 +133,7 @@ again reuses the existing local Cline login:
 1. **Cline usage API (API-only).** A bundled script
    ([`fetch-cline-usage.sh`](package/contents/ui/fetch-cline-usage.sh)) reads the
    access token from `~/.cline/data/settings/providers.json` (the file Cline's CLI
-   itself writes — `providers.<name>.settings.auth.accessToken`) and calls
+   itself writes: `providers.<name>.settings.auth.accessToken`) and calls
    `GET https://api.cline.bot/api/v1/users/me/plan/usage-limits`. The JSON
    response (`data.limits[]` with `type` = `five_hour`/`weekly`/`monthly`,
    `percentUsed`, `resetsAt`) is parsed in
@@ -150,7 +148,7 @@ again reuses the existing local Cline login:
 **Privacy (safe auth token):** the access token is read locally and **only ever
 sent to `api.cline.bot`**. It is never placed in a shell variable, never passed
 on curl's command line (so it is not visible via `ps`), never printed, logged, or
-copied elsewhere — it is written to a `chmod 600` temp file that is removed right
+copied elsewhere; it is written to a `chmod 600` temp file that is removed right
 after the request, and the token never enters the widget code. No third-party
 servers are involved.
 
@@ -170,30 +168,30 @@ the `agy` CLI's own embedded local server instead of any Google account API:
    [`AntigravityApi.js`](package/contents/ui/AntigravityApi.js) into the same
    shape the rest of the widget uses.
 2. **No CLI fallback / no OAuth.** usagemon never touches Google account
-   credentials — if `agy` can't be found or its local server doesn't answer,
+   credentials; if `agy` can't be found or its local server doesn't answer,
    the widget shows the last known values and retries.
 
 Antigravity pools quota per *group* (Gemini models vs. Claude + GPT models)
 rather than per model, each with its own 5-hour and weekly window. The more-
 used bucket of each window becomes the session/week reading (with a matching
 Gemini/Antigravity icon next to "Model:"); the other group's numbers still
-show up as extra rows in the popup, so nothing is hidden — just deprioritized
+show up as extra rows in the popup, so nothing is hidden, just deprioritized
 in the compact view.
 
 ### Privacy (Claude Code)
 
-- usagemon **reuses your existing local Claude Code login** — no separate
+- usagemon **reuses your existing local Claude Code login**, no separate
   sign-in, no passwords.
 - The OAuth token is read locally and **only ever sent to `api.anthropic.com`**
   (the same host the CLI talks to). It is never stored, copied elsewhere, or
-  logged — the token stays inside the fetch subprocess and never enters the
+  logged; the token stays inside the fetch subprocess and never enters the
   widget code.
 - No third-party servers are involved.
 
 ### A note on refresh rate
 
 The usage endpoint is rate-limited (both the API and the CLI hit the same one),
-so polling faster than ~1/minute just yields errors — and the numbers (a 5-hour
+so polling faster than ~1/minute just yields errors, and the numbers (a 5-hour
 session window and a 7-day week window) change slowly anyway. The default is
 every 2 minutes; the minimum is 60 seconds.
 
@@ -217,4 +215,4 @@ To build a new release archive yourself (e.g. after making changes):
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
