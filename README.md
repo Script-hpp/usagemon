@@ -130,10 +130,16 @@ When **Agent / Service** is set to **Cline**, the widget switches to Cline's own
 usage endpoint. There is no public Cline API for rate limits either, so usagemon
 again reuses the existing local Cline login:
 
-1. **Cline usage API (API-only).** A bundled script
-   ([`fetch-cline-usage.sh`](package/contents/ui/fetch-cline-usage.sh)) reads the
-   access token from `~/.cline/data/settings/providers.json` (the file Cline's CLI
-   itself writes: `providers.<name>.settings.auth.accessToken`) and calls
+1. **Cline usage API (ClinePass and API).** A bundled script
+   ([`fetch-cline-usage.sh`](package/contents/ui/fetch-cline-usage.sh) +
+   [`fetch_cline_usage.py`](package/contents/ui/fetch_cline_usage.py)) reads
+   `~/.cline/data/settings/providers.json` (the file Cline's CLI itself writes)
+   and picks the access token from the last-used provider entry
+   (`providers.<name>.settings.auth.accessToken`), falling back to any other
+   configured provider with a still-valid token. This works the same regardless
+   of which Cline provider you're actually on (native "API" credits, Cline Pass,
+   or any other provider Cline lets you configure), since they all share the
+   same token shape and the same account-wide usage-limits endpoint. It then calls
    `GET https://api.cline.bot/api/v1/users/me/plan/usage-limits`. The JSON
    response (`data.limits[]` with `type` = `five_hour`/`weekly`/`monthly`,
    `percentUsed`, `resetsAt`) is parsed in
