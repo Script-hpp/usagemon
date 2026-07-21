@@ -16,7 +16,20 @@ PlasmoidItem {
     readonly property int formFactor: Plasmoid.formFactor
     readonly property bool horizontal: formFactor === PlasmaCore.Types.Horizontal
 
-    property var usage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+    // Dual-service data store. Both are always populated in Both mode; only the
+    // active one in single mode. The rest of the widget reads `usage`, which
+    // always resolves to the currently active tab.
+    property var claudeUsage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+    property var clineUsage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+    property string claudeModel: ""
+    property string clineModel: ""
+    // Which service the popup shows (0 = Claude, 1 = Cline).  In Both mode,
+    // clicking the panel icon cycles tabs; in single mode it is fixed.
+    property int activeTab: root.agentService === 1 ? 1 : 0
+
+    // Convenience binding — every function/callback reads this, so they
+    // automatically follow the active tab.
+    readonly property var usage: activeTab === 0 ? claudeUsage : clineUsage
     property bool busy: false
     property string lastError: ""
     property string lastUpdated: ""
@@ -35,17 +48,21 @@ PlasmoidItem {
     // script name. The token never enters this QML.
     readonly property string fetchClineScript: root.fetchScript.replace("fetch-usage.sh", "fetch-cline-usage.sh")
 
-    // 0 = Claude Code, 1 = Cline
+    // 0 = Claude Code, 1 = Cline, 2 = Both
     readonly property int agentService: plasmoid.configuration.agentService
 
     // Drop any stale numbers from the previous source so the panel never shows
     // the other agent's limits after a settings switch.
     function resetUsageState() {
-        root.usage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+        const empty = { ok: false, error: null, session: null, week: null, extraLimits: [] }
+        root.claudeUsage = empty
+        root.clineUsage = empty
+        root.claudeModel = ""
+        root.clineModel = ""
+        root.activeTab = root.agentService === 1 ? 1 : 0
         root.lastError = ""
-        root.activeModel = ""
-        root.notifiedOver = false
         root.lastUpdated = ""
+        root.notifiedOver = false
     }
 
     onAgentServiceChanged: {
@@ -126,7 +143,11 @@ PlasmoidItem {
     }
 
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
-    toolTipMainText: root.agentService === 1 ? i18n("usagemon — Cline Usage") : i18n("usagemon — Claude Code Usage")
+    toolTipMainText: {
+        if (root.agentService === 2) return i18n("usagemon — Claude + Cline")
+        return root.agentService === 1 ? i18n("usagemon — Cline Usage")
+                                       : i18n("usagemon — Claude Code Usage")
+    }
     toolTipTextFormat: Text.PlainText
     toolTipSubText: root.tooltipText()
 
@@ -139,6 +160,20 @@ PlasmoidItem {
     ]
 
     function tooltipText() {
+        // In Both mode, show summary from both services.
+        function svcLines(u, name) {
+            if (!u.ok) return [i18n("%1: —", name)]
+            let lines = []
+            if (u.session) lines.push(i18n("%1 session: %2%", name, u.session.percent))
+            if (u.week) lines.push(i18n("%1 week: %2%", name, u.week.percent))
+            return lines
+        }
+        if (root.agentService === 2) {
+            let lines = svcLines(root.claudeUsage, i18n("Claude"))
+            lines = lines.concat(svcLines(root.clineUsage, i18n("Cline")))
+            if (root.lastUpdated.length > 0) lines.push(i18n("Updated %1", root.lastUpdated))
+            return lines.join("\n")
+        }
         if (root.lastError.length > 0) {
             return i18n("Error: %1", root.lastError)
         }
@@ -174,80 +209,83 @@ PlasmoidItem {
 
             const stdout = (data["stdout"] || "").toString()
 
-            // The model read is a separate, best-effort source.
+            // --- Model reads (best-effort) ---
+
+            // Claude model from ~/.claude/settings.json
             if (sourceName.indexOf("settings.json") !== -1) {
                 try {
                     const cfg = JSON.parse(stdout)
-                    root.activeModel = root.prettyModel(cfg.model || "")
+                    root.claudeModel = root.prettyModel(cfg.model || "")
                 } catch (e) {
-                    root.activeModel = ""
+                    root.claudeModel = ""
                 }
+                root.activeModel = root.claudeModel
                 return
             }
-            // Cline model read: ~/.cline/data/settings/providers.json carries
-            // the active provider's model id under providers.<name>.settings.model.
+            // Cline model from ~/.cline/.../providers.json
             if (sourceName.indexOf("providers.json") !== -1) {
                 try {
                     const cfg = JSON.parse(stdout)
                     const provs = cfg.providers || {}
-                    const name = cfg.lastUsedProvider
-                        || Object.keys(provs)[0] || ""
+                    const name = cfg.lastUsedProvider || Object.keys(provs)[0] || ""
                     const prov = provs[name] || {}
                     const model = (prov.settings || {}).model || ""
-                    root.activeModel = root.prettyModel(model)
+                    root.clineModel = root.prettyModel(model)
                 } catch (e) {
-                    root.activeModel = ""
+                    root.clineModel = ""
                 }
+                if (root.agentService === 1) root.activeModel = root.clineModel
                 return
             }
 
-            // Primary source: the OAuth usage API (via the bundled fetch script).
+            // --- Claude usage ---
+
+            // Claude OAuth usage API (via the bundled fetch script).
             if (sourceName.indexOf("fetch-usage") !== -1) {
                 const apiParsed = UsageApi.parseUsage(stdout)
                 if (apiParsed.ok) {
-                    root.applyUsage(apiParsed, "api")
-                    root.busy = false
+                    root.applyClaude(apiParsed, "api")
                     return
                 }
                 root.pendingApiError = apiParsed.error || ""
-                // API unavailable (rate limited, no token, network) — in Auto
-                // mode, fall back to the CLI once before giving up this cycle.
+                // In Auto mode, fall back to the CLI once before giving up.
                 if (root.sourceMode === 0 && !root.triedCliFallback) {
                     root.triedCliFallback = true
                     executable.exec(root.cliCommand())
                     return   // keep busy until the CLI result arrives
                 }
                 root.busy = false
-                if (!root.usage.ok) {
+                if (!root.claudeUsage.ok) {
                     root.lastError = apiParsed.error || i18n("Usage unavailable")
                 }
                 scheduleRetry()
                 return
             }
 
-            // Cline source: the Cline usage API (via the bundled fetch script).
-            // Cline has no CLI fallback, so an API failure is final for a cycle.
+            // Cline usage API (no CLI fallback).
             if (sourceName.indexOf("fetch-cline") !== -1) {
                 root.busy = false
                 const clineParsed = ClineApi.parseUsage(stdout)
                 if (clineParsed.ok) {
-                    root.applyUsage(clineParsed, "api")
+                    root.applyCline(clineParsed, "api")
                     return
                 }
-                if (!root.usage.ok) {
+                if (!root.clineUsage.ok) {
                     root.lastError = clineParsed.error || i18n("Usage unavailable")
                 }
                 scheduleRetry()
                 return
             }
 
-            // Fallback source: `claude -p /usage`.
+            // --- Claude CLI fallback ---
+            // (reached only when sourceName matches no known patterns —
+            //  this is the catch-all for `claude -p /usage` output)
             root.busy = false
             const exitCode = data["exit code"]
             const stderr = (data["stderr"] || "").toString()
 
             if (exitCode !== 0 && stdout.trim().length === 0) {
-                if (!root.usage.ok) {
+                if (!root.claudeUsage.ok) {
                     root.lastError = stderr.trim().length > 0
                         ? stderr.trim()
                         : i18n("claude exited with code %1", exitCode)
@@ -258,10 +296,7 @@ PlasmoidItem {
 
             const parsed = UsageParser.parseUsage(stdout)
             if (!parsed.ok) {
-                // Keep the last good values instead of wiping them, and retry.
-                if (!root.usage.ok) {
-                    // Prefer the (more informative) API error if we have one,
-                    // e.g. "Rate limited" rather than the vague CLI message.
+                if (!root.claudeUsage.ok) {
                     root.lastError = root.pendingApiError.length > 0
                         ? root.pendingApiError
                         : (parsed.error || i18n("Could not parse usage output"))
@@ -270,7 +305,7 @@ PlasmoidItem {
                 return
             }
 
-            root.applyUsage(parsed, "cli")
+            root.applyClaude(parsed, "cli")
         }
 
         function exec(cmd) {
@@ -284,29 +319,50 @@ PlasmoidItem {
         return "bash -lc " + JSON.stringify(command + " -p /usage")
     }
 
-    function applyUsage(parsed, source) {
+    function applyClaude(parsed, source) {
+        root.claudeUsage = parsed
         root.lastError = ""
         root.pendingApiError = ""
-        root.usage = parsed
+        root.dataSource = source
+        root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
+        root.checkNotifications()
+    }
+    function applyCline(parsed, source) {
+        root.clineUsage = parsed
+        root.lastError = ""
+        root.dataSource = source
+        root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
+        root.checkNotifications()
+    }
+    function applyUsage(parsed, source) {
+        if (root.activeTab === 0) root.claudeUsage = parsed
+        else root.clineUsage = parsed
+        root.lastError = ""
+        root.pendingApiError = ""
         root.dataSource = source
         root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
         root.checkNotifications()
     }
 
-    // Fire a desktop notification the first time a limit crosses the notify
-    // threshold; reset once everything is back below it (so we notify once per
-    // crossing, not every poll).
     function checkNotifications() {
         if (!plasmoid.configuration.notificationsEnabled) return
         const threshold = plasmoid.configuration.notifyThreshold
-        let over = root.allEntries().filter(e => e.percent >= threshold)
-        if (over.length === 0) {
-            root.notifiedOver = false
-            return
+        let allEntries = []
+        function collect(u) {
+            if (u.session) allEntries.push(u.session)
+            if (u.week) allEntries.push(u.week)
+            if (u.extraLimits) u.extraLimits.forEach(x => allEntries.push(x))
         }
+        if (root.agentService === 2) {
+            collect(root.claudeUsage)
+            collect(root.clineUsage)
+        } else {
+            collect(root.usage)
+        }
+        let over = allEntries.filter(e => e.percent >= threshold)
+        if (over.length === 0) { root.notifiedOver = false; return }
         if (root.notifiedOver) return
         root.notifiedOver = true
-
         let parts = over.map(e => {
             let name = e.label === "session" ? i18n("Session")
                      : (e.label === "week (all models)" ? i18n("Week") : e.label)
@@ -320,12 +376,15 @@ PlasmoidItem {
         id: usageNotification
         componentName: "plasma_workspace"
         eventId: "notification"
-        title: root.agentService === 1 ? i18n("Cline usage high") : i18n("Claude usage high")
+        title: {
+            if (root.agentService === 2) return i18n("Usage high")
+            return root.agentService === 1 ? i18n("Cline usage high")
+                                           : i18n("Claude usage high")
+        }
         iconName: "utilities-system-monitor"
         urgency: Notification.NormalUrgency
     }
 
-    // 0 = Auto (API, then CLI), 1 = OAuth API only, 2 = CLI only
     readonly property int sourceMode: plasmoid.configuration.dataSourceMode
 
     onSourceModeChanged: {
@@ -335,24 +394,36 @@ PlasmoidItem {
 
     function refresh() {
         if (root.busy) return
+
+        // Both: fire everything in parallel, set busy=false immediately
+        // so the poll timer keeps running even while subprocesses fly.
+        if (root.agentService === 2) {
+            root.claudeUsage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+            root.clineUsage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+            root.busy = true
+            root.triedCliFallback = false
+            if (sourceMode === 2)
+                executable.exec(cliCommand())
+            else
+                executable.exec("bash " + JSON.stringify(root.fetchScript))
+            executable.exec("bash " + JSON.stringify(root.fetchClineScript))
+            executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.claude/settings.json\""))
+            executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.cline/data/settings/providers.json\""))
+            return
+        }
+
         root.busy = true
         root.triedCliFallback = false
         if (root.agentService === 1) {
-            // Cline: usage API via the bundled Cline fetch script (API-only,
-            // there is no CLI fallback for Cline).
             executable.exec("bash " + JSON.stringify(root.fetchClineScript))
-            // Read the configured model from Cline's providers.json (best effort).
             executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.cline/data/settings/providers.json\""))
             return
         }
         if (sourceMode === 2) {
-            // CLI only.
             executable.exec(cliCommand())
         } else {
-            // Auto or API-only: OAuth usage API via the bundled fetch script.
             executable.exec("bash " + JSON.stringify(root.fetchScript))
         }
-        // Read the configured model from Claude Code's settings (best effort).
         executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.claude/settings.json\""))
     }
 

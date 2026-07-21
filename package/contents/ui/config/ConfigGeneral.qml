@@ -21,14 +21,15 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18n("Agent / Service:")
         model: [
             i18n("Claude Code"),
-            i18n("Cline")
+            i18n("Cline"),
+            i18n("Both")
         ]
     }
 
     QQC2.ComboBox {
         id: sourceCombo
         Kirigami.FormData.label: i18n("Data source:")
-        visible: serviceCombo.currentIndex === 0
+        visible: serviceCombo.currentIndex === 0 || serviceCombo.currentIndex === 2
         model: [
             i18n("Automatic (OAuth API, then CLI)"),
             i18n("OAuth API only"),
@@ -56,9 +57,19 @@ Kirigami.FormLayout {
         text: i18n("Cline reuses your existing local Cline login — the access token is read from ~/.cline/data/settings/providers.json and sent only to api.cline.bot, never stored. Cline has no CLI fallback, so this source is API-only.")
     }
 
+    QQC2.Label {
+        Kirigami.FormData.label: ""
+        visible: serviceCombo.currentIndex === 2
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 18
+        wrapMode: Text.WordWrap
+        opacity: 0.7
+        font: Kirigami.Theme.smallFont
+        text: i18n("Both: parallel Claude Code + Cline display. Claude uses the OAuth API (or CLI if configured), Cline uses its own API. Click the panel to switch between details in the popup.")
+    }
+
     QQC2.TextField {
         id: claudeCommandField
-        visible: serviceCombo.currentIndex === 0
+        visible: serviceCombo.currentIndex === 0 || serviceCombo.currentIndex === 2
         Kirigami.FormData.label: i18n("Claude command:")
         placeholderText: "claude"
     }

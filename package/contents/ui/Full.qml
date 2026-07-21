@@ -38,14 +38,45 @@ ColumnLayout {
 
             Kirigami.Heading {
                 level: 5
-                text: i18n("usagemon")
+                text: {
+                    if (root.agentService === 2)
+                        return root.activeTab === 0 ? i18n("usagemon — Claude") : i18n("usagemon — Cline")
+                    return root.agentService === 1 ? i18n("usagemon — Cline") : i18n("usagemon")
+                }
                 Layout.fillWidth: true
                 elide: Text.ElideRight
             }
 
+            // In Both mode, show a compact tab switcher under the heading.
+            RowLayout {
+                visible: root.agentService === 2
+                spacing: Kirigami.Units.smallSpacing
+                Repeater {
+                    model: [i18n("Claude"), i18n("Cline")]
+                    delegate: PlasmaComponents3.Label {
+                        text: modelData
+                        font.bold: root.activeTab === index
+                        opacity: root.activeTab === index ? 1.0 : 0.5
+                        color: root.activeTab === index ? Kirigami.Theme.linkColor : Kirigami.Theme.disabledTextColor
+                        font: Kirigami.Theme.smallFont
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.activeTab = index
+                        }
+                    }
+                }
+            }
+
             PlasmaComponents3.Label {
-                visible: root.activeModel.length > 0
-                text: i18n("Model: %1", root.activeModel)
+                visible: (root.agentService === 2
+                          ? (root.activeTab === 0 ? root.claudeModel : root.clineModel).length > 0
+                          : root.activeModel.length > 0)
+                text: {
+                    if (root.agentService === 2)
+                        return i18n("Model: %1", root.activeTab === 0 ? root.claudeModel : root.clineModel)
+                    return i18n("Model: %1", root.activeModel)
+                }
                 opacity: 0.7
                 font: Kirigami.Theme.smallFont
                 Layout.fillWidth: true
