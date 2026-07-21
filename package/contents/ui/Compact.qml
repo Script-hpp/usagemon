@@ -32,6 +32,14 @@ Item {
         return u && u.ok && (!!u.session || !!u.week || (u.extraLimits && u.extraLimits.length > 0))
     }
 
+    // Brand icon for the single active service (Both mode shows all three
+    // separately instead), so the panel reads at a glance without a label.
+    readonly property string singleModeIcon: {
+        if (root.agentService === 1) return "cline.svg"
+        if (root.agentService === 3) return "antigravity.svg"
+        return "anthropic.svg"
+    }
+
     // --- Both-mode layout: labelled indicators side by side ----------
     readonly property bool bothMode: root.agentService === 2
     readonly property int  claudePct: bothMode ? glancePct(root.claudeUsage) : -1
@@ -117,6 +125,13 @@ Item {
         visible: !bothMode
         anchors.centerIn: parent
         spacing: Kirigami.Units.smallSpacing
+
+        // Brand icon from Lobe Icons project (MIT, github.com/lobehub/lobe-icons).
+        Image {
+            source: Qt.resolvedUrl("../icons/" + compact.singleModeIcon)
+            sourceSize.width: Kirigami.Units.iconSizes.small
+            sourceSize.height: Kirigami.Units.iconSizes.small
+        }
 
         // Placeholder (loading / error) — only when we have no numbers.
         RowLayout {
