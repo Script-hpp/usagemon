@@ -87,7 +87,7 @@ ColumnLayout {
                     const antigravityTab = root.agentService === 3 || (root.agentService === 2 && root.activeTab === 2)
                     if (antigravityTab) return shownModel.indexOf("Gemini") !== -1 ? "gemini.svg" : "antigravity.svg"
                     const clineTab = root.agentService === 1 || (root.agentService === 2 && root.activeTab === 1)
-                    return clineTab ? "cline.svg" : "anthropic.svg"
+                    return clineTab ? "cline.svg" : "claude.svg"
                 }
 
                 Image {
