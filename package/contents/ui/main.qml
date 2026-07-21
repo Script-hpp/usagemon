@@ -25,6 +25,7 @@ PlasmoidItem {
     property var antigravityUsage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
     property string claudeModel: ""
     property string clineModel: ""
+    property string antigravityModel: ""
     // Which service the popup shows (0 = Claude, 1 = Cline).  In Both mode,
     // clicking the panel icon cycles tabs; in single mode it is fixed.
     property int activeTab: root.agentService === 1 ? 1 : 0
@@ -73,6 +74,7 @@ PlasmoidItem {
         root.antigravityUsage = empty
         root.claudeModel = ""
         root.clineModel = ""
+        root.antigravityModel = ""
         root.activeModel = ""
         root.activeTab = root.agentService === 1 ? 1 : 0
         root.lastError = ""
@@ -100,6 +102,16 @@ PlasmoidItem {
         let slashIdx = raw.lastIndexOf("/")
         let name = slashIdx >= 0 ? raw.slice(slashIdx + 1) : raw
         return name.charAt(0).toUpperCase() + name.slice(1)
+    }
+
+    // Antigravity's session/week each carry the raw group name they were
+    // picked from ("Gemini Models" / "Claude and GPT models") -> short form
+    // used as the "Model:" line and to pick the matching brand icon.
+    function prettyAntigravityGroup(raw) {
+        if (!raw) return ""
+        if (raw.indexOf("Gemini") !== -1) return i18n("Gemini")
+        if (raw.indexOf("Claude") !== -1) return i18n("Claude + GPT")
+        return raw
     }
 
     readonly property int warnThreshold: plasmoid.configuration.warnThreshold
@@ -370,6 +382,9 @@ PlasmoidItem {
     }
     function applyAntigravity(parsed, source) {
         root.antigravityUsage = parsed
+        const group = (parsed.session && parsed.session.group) || (parsed.week && parsed.week.group) || ""
+        root.antigravityModel = root.prettyAntigravityGroup(group)
+        if (root.agentService === 3) root.activeModel = root.antigravityModel
         root.busy = false
         root.lastError = ""
         root.dataSource = source

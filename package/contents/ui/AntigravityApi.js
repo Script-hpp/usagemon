@@ -138,6 +138,7 @@ function parseUsage(jsonText) {
     if (sessionPick) {
         result.session = {
             label: "session",
+            group: sessionPick.group,
             percent: sessionPick.percent,
             resets: sessionPick.resets,
             resetsAt: sessionPick.resetsAt,
@@ -147,6 +148,7 @@ function parseUsage(jsonText) {
     if (weekPick) {
         result.week = {
             label: "week (all models)",
+            group: weekPick.group,
             percent: weekPick.percent,
             resets: weekPick.resets,
             resetsAt: weekPick.resetsAt,

@@ -71,20 +71,40 @@ ColumnLayout {
                 }
             }
 
-            PlasmaComponents3.Label {
-                // Antigravity has no tracked model name (tab 2 -> "").
-                readonly property string bothModel: root.activeTab === 0 ? root.claudeModel
-                                                   : root.activeTab === 1 ? root.clineModel : ""
-                visible: (root.agentService === 2 ? bothModel.length > 0 : root.activeModel.length > 0)
-                text: {
-                    if (root.agentService === 2)
-                        return i18n("Model: %1", bothModel)
-                    return i18n("Model: %1", root.activeModel)
-                }
-                opacity: 0.7
-                font: Kirigami.Theme.smallFont
+            RowLayout {
+                spacing: Kirigami.Units.smallSpacing / 2
                 Layout.fillWidth: true
-                elide: Text.ElideRight
+
+                readonly property string bothModel: root.activeTab === 0 ? root.claudeModel
+                                                   : root.activeTab === 1 ? root.clineModel
+                                                   : root.antigravityModel
+                readonly property string shownModel: root.agentService === 2 ? bothModel : root.activeModel
+                // Brand icon for the model family behind the current reading:
+                // Claude for Claude Code/Cline (Cline mostly proxies Claude
+                // models too), Antigravity's own icon unless its active group
+                // is Gemini, in which case that's more informative.
+                readonly property string modelIcon: {
+                    const antigravityTab = root.agentService === 3 || (root.agentService === 2 && root.activeTab === 2)
+                    if (antigravityTab) return shownModel.indexOf("Gemini") !== -1 ? "gemini.svg" : "antigravity.svg"
+                    const clineTab = root.agentService === 1 || (root.agentService === 2 && root.activeTab === 1)
+                    return clineTab ? "cline.svg" : "anthropic.svg"
+                }
+
+                Image {
+                    visible: parent.shownModel.length > 0
+                    source: Qt.resolvedUrl("../icons/" + parent.modelIcon)
+                    sourceSize.width: Kirigami.Units.iconSizes.small
+                    sourceSize.height: Kirigami.Units.iconSizes.small
+                }
+
+                PlasmaComponents3.Label {
+                    visible: parent.shownModel.length > 0
+                    text: i18n("Model: %1", parent.shownModel)
+                    opacity: 0.7
+                    font: Kirigami.Theme.smallFont
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                }
             }
         }
 
