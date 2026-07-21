@@ -84,29 +84,24 @@ Item {
 
         Repeater {
             model: [
-                { label: "A", pct: claudePct, ok: claudeOk, color: worstColor(root.claudeUsage), active: root.activeTab === 0 },
-                { label: "C", pct: clinePct,  ok: clineOk,  color: worstColor(root.clineUsage),  active: root.activeTab === 1 }
+                { label: "", icon: "../icons/anthropic.svg", pct: claudePct, ok: claudeOk, color: worstColor(root.claudeUsage), active: root.activeTab === 0 },
+                { label: "", icon: "../icons/cline.svg", pct: clinePct,  ok: clineOk,  color: worstColor(root.clineUsage),  active: root.activeTab === 1 }
             ]
             delegate: RowLayout {
                 spacing: Kirigami.Units.smallSpacing / 2
 
-                // Stylised indicator circle with a letter.
-                Rectangle {
-                    width: Kirigami.Units.iconSizes.small + 2
-                    height: width
-                    radius: width / 2
-                    color: modelData.active ? modelData.color : Kirigami.Theme.disabledTextColor
-                    opacity: modelData.active ? 1 : 0.5
-                    PlasmaComponents3.Label {
-                        anchors.centerIn: parent
-                        text: modelData.label
-                        font.bold: true
-                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                        color: "white"
-                    }
+                // Brand icon from Lobe Icons project (MIT, github.com/lobehub/lobe-icons).
+                // Uses fill="currentColor" so it inherits the severity colour.
+                Kirigami.Icon {
+                    source: modelData.icon
+                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                    Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                    color: modelData.ok ? modelData.color : Kirigami.Theme.disabledTextColor
+                    opacity: modelData.active ? 1 : 0.45
                 }
 
                 PlasmaComponents3.Label {
+                    visible: modelData.ok
                     text: modelData.ok ? (modelData.pct >= 0 ? modelData.pct + "%" : "…") : "—"
                     color: modelData.ok ? modelData.color : Kirigami.Theme.disabledTextColor
                     font.bold: modelData.active
