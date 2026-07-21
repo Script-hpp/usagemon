@@ -56,9 +56,9 @@ ColumnLayout {
                     delegate: PlasmaComponents3.Label {
                         text: modelData
                         font.bold: root.activeTab === index
+                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                         opacity: root.activeTab === index ? 1.0 : 0.5
                         color: root.activeTab === index ? Kirigami.Theme.linkColor : Kirigami.Theme.disabledTextColor
-                        font: Kirigami.Theme.smallFont
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
