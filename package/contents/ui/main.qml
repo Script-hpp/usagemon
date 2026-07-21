@@ -8,6 +8,7 @@ import org.kde.plasma.plasma5support as P5Support
 import org.kde.notification
 import "UsageParser.js" as UsageParser
 import "UsageApi.js" as UsageApi
+import "ClineApi.js" as ClineApi
 
 PlasmoidItem {
     id: root
@@ -29,6 +30,14 @@ PlasmoidItem {
     // the usage API in a subprocess; the token never enters this QML).
     readonly property string fetchScript: Qt.resolvedUrl("fetch-usage.sh").toString().replace(/^file:\/\//, "")
 
+    // Path to the bundled Cline fetch script — derived from fetchScript (same
+    // package directory, file:// prefix already stripped), just swapping the
+    // script name. The token never enters this QML.
+    readonly property string fetchClineScript: root.fetchScript.replace("fetch-usage.sh", "fetch-cline-usage.sh")
+
+    // 0 = Claude Code, 1 = Cline
+    readonly property int agentService: plasmoid.configuration.agentService
+
     function prettyModel(raw) {
         if (!raw || raw.length === 0) return ""
         // Short aliases like "opus"/"sonnet"/"haiku" -> capitalized.
@@ -40,7 +49,10 @@ PlasmoidItem {
             return ver.length > 0 ? name + " " + ver : name
         }
         if (raw === "default") return i18n("Default")
-        return raw.charAt(0).toUpperCase() + raw.slice(1)
+        // Provider-prefixed model ids like "cline-pass/glm-5.2" -> "Glm-5.2".
+        let slashIdx = raw.lastIndexOf("/")
+        let name = slashIdx >= 0 ? raw.slice(slashIdx + 1) : raw
+        return name.charAt(0).toUpperCase() + name.slice(1)
     }
 
     readonly property int warnThreshold: plasmoid.configuration.warnThreshold
@@ -99,7 +111,7 @@ PlasmoidItem {
     }
 
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
-    toolTipMainText: i18n("usagemon — Claude Code Usage")
+    toolTipMainText: root.agentService === 1 ? i18n("usagemon — Cline Usage") : i18n("usagemon — Claude Code Usage")
     toolTipTextFormat: Text.PlainText
     toolTipSubText: root.tooltipText()
 
@@ -157,6 +169,22 @@ PlasmoidItem {
                 }
                 return
             }
+            // Cline model read: ~/.cline/data/settings/providers.json carries
+            // the active provider's model id under providers.<name>.settings.model.
+            if (sourceName.indexOf("providers.json") !== -1) {
+                try {
+                    const cfg = JSON.parse(stdout)
+                    const provs = cfg.providers || {}
+                    const name = cfg.lastUsedProvider
+                        || Object.keys(provs)[0] || ""
+                    const prov = provs[name] || {}
+                    const model = (prov.settings || {}).model || ""
+                    root.activeModel = root.prettyModel(model)
+                } catch (e) {
+                    root.activeModel = ""
+                }
+                return
+            }
 
             // Primary source: the OAuth usage API (via the bundled fetch script).
             if (sourceName.indexOf("fetch-usage") !== -1) {
@@ -177,6 +205,22 @@ PlasmoidItem {
                 root.busy = false
                 if (!root.usage.ok) {
                     root.lastError = apiParsed.error || i18n("Usage unavailable")
+                }
+                scheduleRetry()
+                return
+            }
+
+            // Cline source: the Cline usage API (via the bundled fetch script).
+            // Cline has no CLI fallback, so an API failure is final for a cycle.
+            if (sourceName.indexOf("fetch-cline") !== -1) {
+                root.busy = false
+                const clineParsed = ClineApi.parseUsage(stdout)
+                if (clineParsed.ok) {
+                    root.applyUsage(clineParsed, "api")
+                    return
+                }
+                if (!root.usage.ok) {
+                    root.lastError = clineParsed.error || i18n("Usage unavailable")
                 }
                 scheduleRetry()
                 return
@@ -261,7 +305,7 @@ PlasmoidItem {
         id: usageNotification
         componentName: "plasma_workspace"
         eventId: "notification"
-        title: i18n("Claude usage high")
+        title: root.agentService === 1 ? i18n("Cline usage high") : i18n("Claude usage high")
         iconName: "utilities-system-monitor"
         urgency: Notification.NormalUrgency
     }
@@ -273,6 +317,14 @@ PlasmoidItem {
         if (root.busy) return
         root.busy = true
         root.triedCliFallback = false
+        if (root.agentService === 1) {
+            // Cline: usage API via the bundled Cline fetch script (API-only,
+            // there is no CLI fallback for Cline).
+            executable.exec("bash " + JSON.stringify(root.fetchClineScript))
+            // Read the configured model from Cline's providers.json (best effort).
+            executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.cline/data/settings/providers.json\""))
+            return
+        }
         if (sourceMode === 2) {
             // CLI only.
             executable.exec(cliCommand())

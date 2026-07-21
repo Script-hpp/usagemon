@@ -3,11 +3,12 @@
 [![Available on the KDE Store](https://img.shields.io/badge/KDE%20Store-usagemon-blue)](https://store.kde.org/p/2365234/)
 
 A KDE Plasma 6 panel widget that shows your [Claude Code](https://claude.com/claude-code)
-subscription usage — session and weekly rate limits — at a glance, so you don't
-have to type `/usage` in a terminal every time.
+**or** [Cline](https://cline.bot) subscription usage — session and weekly rate
+limits — at a glance, so you don't have to type `/usage` in a terminal every time.
 
 It reads your usage in the background and shows a compact, color-coded readout
 in your panel. Click it for a popup with the full breakdown and reset times.
+Pick which agent to monitor in the widget's settings.
 
 <p align="center">
   <img src="images/usagemon_bar.png" alt="Panel readout" height="40">
@@ -48,8 +49,9 @@ in your panel. Click it for a popup with the full breakdown and reset times.
 ## Requirements
 
 - KDE Plasma 6
-- [Claude Code](https://claude.com/claude-code) installed and logged in. usagemon
-  reuses that existing login — you don't authenticate separately.
+- [Claude Code](https://claude.com/claude-code) **and/or** [Cline](https://cline.bot)
+  installed and logged in. usagemon reuses that existing login — you don't
+  authenticate separately. Choose which one to monitor in the widget settings.
 
 ## Install
 
@@ -80,7 +82,8 @@ Right-click the widget → **Configure usagemon…** → **General**:
 
 | Option | Default | Description |
 | --- | --- | --- |
-| Data source | Automatic | `Automatic` (OAuth API, then CLI), `OAuth API only`, or `CLI only` |
+| Agent / Service | `Claude Code` | Which agent's usage to monitor: `Claude Code` or `Cline` |
+| Data source | Automatic | `Automatic` (OAuth API, then CLI), `OAuth API only`, or `CLI only` *(Claude Code only — Cline is API-only)* |
 | Claude command | `claude` | Path/name of the `claude` binary (used by the CLI source) |
 | Poll interval (seconds) | `120` | How often to refresh (min 60 — the source is rate-limited) |
 | Warn threshold (%) | `75` | Usage at which the readout turns yellow (when no API severity) |
@@ -106,6 +109,34 @@ two-tier, **privacy-first** approach:
    output ([`UsageParser.js`](package/contents/ui/UsageParser.js)).
 
 You choose the mode in the settings (Automatic / API only / CLI only).
+
+### Cline support
+
+When **Agent / Service** is set to **Cline**, the widget switches to Cline's own
+usage endpoint. There is no public Cline API for rate limits either, so usagemon
+again reuses the existing local Cline login:
+
+1. **Cline usage API (API-only).** A bundled script
+   ([`fetch-cline-usage.sh`](package/contents/ui/fetch-cline-usage.sh)) reads the
+   access token from `~/.cline/data/settings/providers.json` (the file Cline's CLI
+   itself writes — `providers.<name>.settings.auth.accessToken`) and calls
+   `GET https://api.cline.bot/api/v1/users/me/plan/usage-limits`. The JSON
+   response (`data.limits[]` with `type` = `five_hour`/`weekly`/`monthly`,
+   `percentUsed`, `resetsAt`) is parsed in
+   [`ClineApi.js`](package/contents/ui/ClineApi.js) into the same shape the rest
+   of the widget uses. Cline provides no `severity`, so colors fall back to the
+   configured warning/critical thresholds; the `monthly` limit shows as an extra
+   row in the popup.
+2. **No CLI fallback.** Cline's CLI does not expose a `/usage` text command, so
+   the Cline source is API-only. If the API is unavailable (no token, expired
+   token, offline), the widget shows the last known values and retries.
+
+**Privacy (safe auth token):** the access token is read locally and **only ever
+sent to `api.cline.bot`**. It is never placed in a shell variable, never passed
+on curl's command line (so it is not visible via `ps`), never printed, logged, or
+copied elsewhere — it is written to a `chmod 600` temp file that is removed right
+after the request, and the token never enters the widget code. No third-party
+servers are involved.
 
 ### Privacy
 
