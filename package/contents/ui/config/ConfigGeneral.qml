@@ -12,25 +12,30 @@ Kirigami.FormLayout {
     property alias cfg_criticalThreshold: criticalThresholdSpin.value
     property alias cfg_widePopup: widePopupCheck.checked
     property alias cfg_dataSourceMode: sourceCombo.currentIndex
-    property alias cfg_agentService: serviceCombo.currentIndex
+    // agentService's stored int (0=Claude, 1=Cline, 2=All, 3=Antigravity) is
+    // fixed by the rest of the widget; valueRole lets the dropdown show a
+    // different order (All last) without renumbering that meaning.
+    property alias cfg_agentService: serviceCombo.currentValue
     property alias cfg_notificationsEnabled: notifyCheck.checked
     property alias cfg_notifyThreshold: notifyThresholdSpin.value
 
     QQC2.ComboBox {
         id: serviceCombo
         Kirigami.FormData.label: i18n("Agent / Service:")
+        textRole: "text"
+        valueRole: "value"
         model: [
-            i18n("Claude Code"),
-            i18n("Cline"),
-            i18n("All"),
-            i18n("Antigravity")
+            { text: i18n("Claude Code"), value: 0 },
+            { text: i18n("Cline"), value: 1 },
+            { text: i18n("Antigravity"), value: 3 },
+            { text: i18n("All"), value: 2 }
         ]
     }
 
     QQC2.ComboBox {
         id: sourceCombo
         Kirigami.FormData.label: i18n("Data source:")
-        visible: serviceCombo.currentIndex === 0 || serviceCombo.currentIndex === 2
+        visible: serviceCombo.currentValue === 0 || serviceCombo.currentValue === 2
         model: [
             i18n("Automatic (OAuth API, then CLI)"),
             i18n("OAuth API only"),
@@ -40,7 +45,7 @@ Kirigami.FormLayout {
 
     QQC2.Label {
         Kirigami.FormData.label: ""
-        visible: serviceCombo.currentIndex === 0
+        visible: serviceCombo.currentValue === 0
         Layout.maximumWidth: Kirigami.Units.gridUnit * 18
         wrapMode: Text.WordWrap
         opacity: 0.7
@@ -50,7 +55,7 @@ Kirigami.FormLayout {
 
     QQC2.Label {
         Kirigami.FormData.label: ""
-        visible: serviceCombo.currentIndex === 1
+        visible: serviceCombo.currentValue === 1
         Layout.maximumWidth: Kirigami.Units.gridUnit * 18
         wrapMode: Text.WordWrap
         opacity: 0.7
@@ -60,7 +65,7 @@ Kirigami.FormLayout {
 
     QQC2.Label {
         Kirigami.FormData.label: ""
-        visible: serviceCombo.currentIndex === 2
+        visible: serviceCombo.currentValue === 2
         Layout.maximumWidth: Kirigami.Units.gridUnit * 18
         wrapMode: Text.WordWrap
         opacity: 0.7
@@ -70,7 +75,7 @@ Kirigami.FormLayout {
 
     QQC2.Label {
         Kirigami.FormData.label: ""
-        visible: serviceCombo.currentIndex === 3
+        visible: serviceCombo.currentValue === 3
         Layout.maximumWidth: Kirigami.Units.gridUnit * 18
         wrapMode: Text.WordWrap
         opacity: 0.7
@@ -80,7 +85,7 @@ Kirigami.FormLayout {
 
     QQC2.TextField {
         id: claudeCommandField
-        visible: serviceCombo.currentIndex === 0 || serviceCombo.currentIndex === 2
+        visible: serviceCombo.currentValue === 0 || serviceCombo.currentValue === 2
         Kirigami.FormData.label: i18n("Claude command:")
         placeholderText: "claude"
     }
