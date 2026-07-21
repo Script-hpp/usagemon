@@ -397,8 +397,8 @@ PlasmoidItem {
     function refresh() {
         if (root.busy) return
 
-        // Both: fire everything in parallel, set busy=false immediately
-        // so the poll timer keeps running even while subprocesses fly.
+        // Both: fire everything in parallel and clear busy immediately so the
+        // poll timer keeps running while subprocesses fly asynchronously.
         if (root.agentService === 2) {
             root.claudeUsage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
             root.clineUsage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
@@ -411,6 +411,7 @@ PlasmoidItem {
             executable.exec("bash " + JSON.stringify(root.fetchClineScript))
             executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.claude/settings.json\""))
             executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.cline/data/settings/providers.json\""))
+            root.busy = false
             return
         }
 
