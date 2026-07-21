@@ -39,8 +39,10 @@ ColumnLayout {
             Kirigami.Heading {
                 level: 5
                 text: {
-                    if (root.agentService === 2)
-                        return root.activeTab === 0 ? i18n("usagemon — Claude") : i18n("usagemon — Cline")
+                    if (root.agentService === 2) {
+                        const names = [i18n("Claude"), i18n("Cline"), i18n("Antigravity")]
+                        return i18n("usagemon — %1", names[root.activeTab])
+                    }
                     if (root.agentService === 3) return i18n("usagemon — Antigravity")
                     return root.agentService === 1 ? i18n("usagemon — Cline") : i18n("usagemon")
                 }
@@ -53,7 +55,7 @@ ColumnLayout {
                 visible: root.agentService === 2
                 spacing: Kirigami.Units.smallSpacing
                 Repeater {
-                    model: [i18n("Claude"), i18n("Cline")]
+                    model: [i18n("Claude"), i18n("Cline"), i18n("Antigravity")]
                     delegate: PlasmaComponents3.Label {
                         text: modelData
                         font.bold: root.activeTab === index
@@ -70,12 +72,13 @@ ColumnLayout {
             }
 
             PlasmaComponents3.Label {
-                visible: (root.agentService === 2
-                          ? (root.activeTab === 0 ? root.claudeModel : root.clineModel).length > 0
-                          : root.activeModel.length > 0)
+                // Antigravity has no tracked model name (tab 2 -> "").
+                readonly property string bothModel: root.activeTab === 0 ? root.claudeModel
+                                                   : root.activeTab === 1 ? root.clineModel : ""
+                visible: (root.agentService === 2 ? bothModel.length > 0 : root.activeModel.length > 0)
                 text: {
                     if (root.agentService === 2)
-                        return i18n("Model: %1", root.activeTab === 0 ? root.claudeModel : root.clineModel)
+                        return i18n("Model: %1", bothModel)
                     return i18n("Model: %1", root.activeModel)
                 }
                 opacity: 0.7

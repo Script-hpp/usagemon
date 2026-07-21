@@ -17,7 +17,7 @@ PlasmoidItem {
     readonly property int formFactor: Plasmoid.formFactor
     readonly property bool horizontal: formFactor === PlasmaCore.Types.Horizontal
 
-    // Dual-service data store. Both are always populated in Both mode; only the
+    // Per-service data store. All three are populated in Both mode; only the
     // active one in single mode. The rest of the widget reads `usage`, which
     // always resolves to the currently active tab.
     property var claudeUsage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
@@ -30,10 +30,15 @@ PlasmoidItem {
     property int activeTab: root.agentService === 1 ? 1 : 0
 
     // Convenience binding — every function/callback reads this, so they
-    // automatically follow the active tab. Antigravity has no Both-mode
-    // tab, it is always its own single-mode source.
+    // automatically follow the active tab. Tab order in Both mode is
+    // [Claude, Cline, Antigravity]; single-mode Antigravity ignores the tab.
+    function usageForTab(tab) {
+        if (tab === 1) return root.clineUsage
+        if (tab === 2) return root.antigravityUsage
+        return root.claudeUsage
+    }
     readonly property var usage: root.agentService === 3 ? antigravityUsage
-                                 : (activeTab === 0 ? claudeUsage : clineUsage)
+                                 : usageForTab(activeTab)
     property bool busy: false
     property string lastError: ""
     property string lastUpdated: ""
@@ -56,7 +61,7 @@ PlasmoidItem {
     // agy CLI's loopback HTTPS port, never to Google account credentials).
     readonly property string fetchAntigravityScript: root.fetchScript.replace("fetch-usage.sh", "fetch-antigravity-usage.sh")
 
-    // 0 = Claude Code, 1 = Cline, 2 = Both (Claude + Cline), 3 = Antigravity
+    // 0 = Claude Code, 1 = Cline, 2 = All (Claude + Cline + Antigravity), 3 = Antigravity
     readonly property int agentService: plasmoid.configuration.agentService
 
     // Drop any stale numbers from the previous source so the panel never shows
@@ -154,7 +159,7 @@ PlasmoidItem {
 
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
     toolTipMainText: {
-        if (root.agentService === 2) return i18n("usagemon — Claude + Cline")
+        if (root.agentService === 2) return i18n("usagemon — Claude + Cline + Antigravity")
         if (root.agentService === 3) return i18n("usagemon — Antigravity Usage")
         return root.agentService === 1 ? i18n("usagemon — Cline Usage")
                                        : i18n("usagemon — Claude Code Usage")
@@ -182,6 +187,7 @@ PlasmoidItem {
         if (root.agentService === 2) {
             let lines = svcLines(root.claudeUsage, i18n("Claude"))
             lines = lines.concat(svcLines(root.clineUsage, i18n("Cline")))
+            lines = lines.concat(svcLines(root.antigravityUsage, i18n("Antigravity")))
             if (root.lastUpdated.length > 0) lines.push(i18n("Updated %1", root.lastUpdated))
             return lines.join("\n")
         }
@@ -392,6 +398,7 @@ PlasmoidItem {
         if (root.agentService === 2) {
             collect(root.claudeUsage)
             collect(root.clineUsage)
+            collect(root.antigravityUsage)
         } else {
             collect(root.usage)
         }
@@ -437,6 +444,7 @@ PlasmoidItem {
         if (root.agentService === 2) {
             root.claudeUsage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
             root.clineUsage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+            root.antigravityUsage = ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
             root.busy = true
             root.triedCliFallback = false
             if (sourceMode === 2)
@@ -444,6 +452,7 @@ PlasmoidItem {
             else
                 executable.exec("bash " + JSON.stringify(root.fetchScript))
             executable.exec("bash " + JSON.stringify(root.fetchClineScript))
+            executable.exec("bash " + JSON.stringify(root.fetchAntigravityScript))
             executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.claude/settings.json\""))
             executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.cline/data/settings/providers.json\""))
             root.busy = false

@@ -15,7 +15,7 @@
         <entry name="dataSourceMode" type="Int">
             <default>0</default>
         </entry>
-        <!-- 0 = Claude Code, 1 = Cline, 2 = Both (Claude + Cline), 3 = Antigravity -->
+        <!-- 0 = Claude Code, 1 = Cline, 2 = All (Claude + Cline + Antigravity), 3 = Antigravity -->
         <entry name="agentService" type="Int">
             <default>0</default>
         </entry>

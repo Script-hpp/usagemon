@@ -32,12 +32,14 @@ Item {
         return u && u.ok && (!!u.session || !!u.week || (u.extraLimits && u.extraLimits.length > 0))
     }
 
-    // --- Both-mode layout: two labelled indicators side by side ----------
+    // --- Both-mode layout: labelled indicators side by side ----------
     readonly property bool bothMode: root.agentService === 2
     readonly property int  claudePct: bothMode ? glancePct(root.claudeUsage) : -1
     readonly property int  clinePct:  bothMode ? glancePct(root.clineUsage) : -1
+    readonly property int  antigravityPct: bothMode ? glancePct(root.antigravityUsage) : -1
     readonly property bool claudeOk: bothMode && hasGoodData(root.claudeUsage)
     readonly property bool clineOk:  bothMode && hasGoodData(root.clineUsage)
+    readonly property bool antigravityOk: bothMode && hasGoodData(root.antigravityUsage)
 
     Layout.preferredWidth: {
         if (!horizontal) return Kirigami.Units.iconSizes.medium
@@ -65,7 +67,7 @@ Item {
             if (mouse.button === Qt.MiddleButton) {
                 root.refresh()
             } else if (bothMode) {
-                root.activeTab = root.activeTab === 0 ? 1 : 0
+                root.activeTab = (root.activeTab + 1) % 3
                 if (!root.expanded) root.expanded = true
             } else {
                 root.expanded = !root.expanded
@@ -82,8 +84,9 @@ Item {
 
         Repeater {
             model: [
-                { label: "", icon: "../icons/anthropic.svg", pct: claudePct, ok: claudeOk, color: glanceColor(root.claudeUsage), active: root.activeTab === 0 },
-                { label: "", icon: "../icons/cline.svg", pct: clinePct,  ok: clineOk,  color: glanceColor(root.clineUsage),  active: root.activeTab === 1 }
+                { icon: "anthropic.svg", pct: claudePct, ok: claudeOk, color: glanceColor(root.claudeUsage), active: root.activeTab === 0 },
+                { icon: "cline.svg", pct: clinePct,  ok: clineOk,  color: glanceColor(root.clineUsage),  active: root.activeTab === 1 },
+                { icon: "antigravity.svg", pct: antigravityPct, ok: antigravityOk, color: glanceColor(root.antigravityUsage), active: root.activeTab === 2 }
             ]
             delegate: RowLayout {
                 spacing: Kirigami.Units.smallSpacing / 2
@@ -92,7 +95,7 @@ Item {
                 // SVG renders as-is; the percentage label already carries the
                 // severity colour. The active tab icon is opaque, inactive is dimmed.
                 Image {
-                    source: Qt.resolvedUrl("../icons/" + (index === 0 ? "anthropic.svg" : "cline.svg"))
+                    source: Qt.resolvedUrl("../icons/" + modelData.icon)
                     sourceSize.width: Kirigami.Units.iconSizes.small
                     sourceSize.height: Kirigami.Units.iconSizes.small
                     opacity: modelData.active ? 1 : 0.45

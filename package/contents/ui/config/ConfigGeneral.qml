@@ -16,15 +16,53 @@ Kirigami.FormLayout {
     property alias cfg_notificationsEnabled: notifyCheck.checked
     property alias cfg_notifyThreshold: notifyThresholdSpin.value
 
+    // Icon shown per agentService index in the combo box below; "" for All
+    // since it represents every service at once rather than one brand.
+    readonly property var serviceIcons: ["../../icons/anthropic.svg", "../../icons/cline.svg", "", "../../icons/antigravity.svg"]
+
     QQC2.ComboBox {
         id: serviceCombo
         Kirigami.FormData.label: i18n("Agent / Service:")
         model: [
             i18n("Claude Code"),
             i18n("Cline"),
-            i18n("Both"),
+            i18n("All"),
             i18n("Antigravity")
         ]
+
+        delegate: QQC2.ItemDelegate {
+            width: serviceCombo.width
+            highlighted: serviceCombo.highlightedIndex === index
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+                Image {
+                    visible: page.serviceIcons[index].length > 0
+                    source: page.serviceIcons[index].length > 0 ? Qt.resolvedUrl(page.serviceIcons[index]) : ""
+                    sourceSize.width: Kirigami.Units.iconSizes.small
+                    sourceSize.height: Kirigami.Units.iconSizes.small
+                }
+                QQC2.Label {
+                    text: modelData
+                    Layout.fillWidth: true
+                }
+            }
+        }
+
+        contentItem: RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+            Image {
+                visible: page.serviceIcons[serviceCombo.currentIndex].length > 0
+                source: page.serviceIcons[serviceCombo.currentIndex].length > 0
+                        ? Qt.resolvedUrl(page.serviceIcons[serviceCombo.currentIndex]) : ""
+                sourceSize.width: Kirigami.Units.iconSizes.small
+                sourceSize.height: Kirigami.Units.iconSizes.small
+            }
+            QQC2.Label {
+                text: serviceCombo.displayText
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
+        }
     }
 
     QQC2.ComboBox {
@@ -65,7 +103,7 @@ Kirigami.FormLayout {
         wrapMode: Text.WordWrap
         opacity: 0.7
         font: Kirigami.Theme.smallFont
-        text: i18n("Both: parallel Claude Code + Cline display. Claude uses the OAuth API (or CLI if configured), Cline uses its own API. Click the panel to switch between details in the popup.")
+        text: i18n("All: parallel Claude Code + Cline + Antigravity display. Claude uses the OAuth API (or CLI if configured), Cline and Antigravity use their own sources. Click the panel to cycle between details in the popup.")
     }
 
     QQC2.Label {
