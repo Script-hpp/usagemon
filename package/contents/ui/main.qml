@@ -321,6 +321,7 @@ PlasmoidItem {
 
     function applyClaude(parsed, source) {
         root.claudeUsage = parsed
+        root.busy = false
         root.lastError = ""
         root.pendingApiError = ""
         root.dataSource = source
@@ -329,6 +330,7 @@ PlasmoidItem {
     }
     function applyCline(parsed, source) {
         root.clineUsage = parsed
+        root.busy = false
         root.lastError = ""
         root.dataSource = source
         root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
