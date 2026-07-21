@@ -14,12 +14,20 @@ all three at once.
 
 <p align="center">
   <img src="images/usagemon_bar.png" alt="Panel readout" height="40">
+  &nbsp;&nbsp;
+  <img src="images/all_models.png" alt="Panel readout in All mode (Claude + Cline + Antigravity)" height="40">
 </p>
 
 <p align="center">
   <img src="images/usagemon_status.png" alt="Usage popup" width="330">
   &nbsp;&nbsp;
   <img src="images/full_wide.png" alt="Usage popup (wider layout, with countdown + absolute reset time)" width="380">
+</p>
+
+<p align="center">
+  <img src="images/cline.png" alt="Cline usage popup" width="330">
+  &nbsp;&nbsp;
+  <img src="images/antigravity_full.png" alt="Antigravity usage popup" width="330">
 </p>
 
 <details>
