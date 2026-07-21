@@ -9,6 +9,7 @@ import org.kde.notification
 import "UsageParser.js" as UsageParser
 import "UsageApi.js" as UsageApi
 import "ClineApi.js" as ClineApi
+import "AntigravityApi.js" as AntigravityApi
 
 PlasmoidItem {
     id: root
@@ -21,6 +22,7 @@ PlasmoidItem {
     // always resolves to the currently active tab.
     property var claudeUsage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
     property var clineUsage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
+    property var antigravityUsage: ({ ok: false, error: null, session: null, week: null, extraLimits: [] })
     property string claudeModel: ""
     property string clineModel: ""
     // Which service the popup shows (0 = Claude, 1 = Cline).  In Both mode,
@@ -28,8 +30,10 @@ PlasmoidItem {
     property int activeTab: root.agentService === 1 ? 1 : 0
 
     // Convenience binding — every function/callback reads this, so they
-    // automatically follow the active tab.
-    readonly property var usage: activeTab === 0 ? claudeUsage : clineUsage
+    // automatically follow the active tab. Antigravity has no Both-mode
+    // tab, it is always its own single-mode source.
+    readonly property var usage: root.agentService === 3 ? antigravityUsage
+                                 : (activeTab === 0 ? claudeUsage : clineUsage)
     property bool busy: false
     property string lastError: ""
     property string lastUpdated: ""
@@ -48,7 +52,11 @@ PlasmoidItem {
     // script name. The token never enters this QML.
     readonly property string fetchClineScript: root.fetchScript.replace("fetch-usage.sh", "fetch-cline-usage.sh")
 
-    // 0 = Claude Code, 1 = Cline, 2 = Both
+    // Path to the bundled Antigravity fetch script (talks only to the local
+    // agy CLI's loopback HTTPS port, never to Google account credentials).
+    readonly property string fetchAntigravityScript: root.fetchScript.replace("fetch-usage.sh", "fetch-antigravity-usage.sh")
+
+    // 0 = Claude Code, 1 = Cline, 2 = Both (Claude + Cline), 3 = Antigravity
     readonly property int agentService: plasmoid.configuration.agentService
 
     // Drop any stale numbers from the previous source so the panel never shows
@@ -57,8 +65,10 @@ PlasmoidItem {
         const empty = { ok: false, error: null, session: null, week: null, extraLimits: [] }
         root.claudeUsage = empty
         root.clineUsage = empty
+        root.antigravityUsage = empty
         root.claudeModel = ""
         root.clineModel = ""
+        root.activeModel = ""
         root.activeTab = root.agentService === 1 ? 1 : 0
         root.lastError = ""
         root.lastUpdated = ""
@@ -145,6 +155,7 @@ PlasmoidItem {
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
     toolTipMainText: {
         if (root.agentService === 2) return i18n("usagemon — Claude + Cline")
+        if (root.agentService === 3) return i18n("usagemon — Antigravity Usage")
         return root.agentService === 1 ? i18n("usagemon — Cline Usage")
                                        : i18n("usagemon — Claude Code Usage")
     }
@@ -262,6 +273,21 @@ PlasmoidItem {
                 return
             }
 
+            // Antigravity usage (agy CLI local server, no fallback).
+            if (sourceName.indexOf("fetch-antigravity") !== -1) {
+                root.busy = false
+                const antigravityParsed = AntigravityApi.parseUsage(stdout)
+                if (antigravityParsed.ok) {
+                    root.applyAntigravity(antigravityParsed, "api")
+                    return
+                }
+                if (!root.antigravityUsage.ok) {
+                    root.lastError = antigravityParsed.error || i18n("Usage unavailable")
+                }
+                scheduleRetry()
+                return
+            }
+
             // Cline usage API (no CLI fallback).
             if (sourceName.indexOf("fetch-cline") !== -1) {
                 root.busy = false
@@ -336,6 +362,14 @@ PlasmoidItem {
         root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
         root.checkNotifications()
     }
+    function applyAntigravity(parsed, source) {
+        root.antigravityUsage = parsed
+        root.busy = false
+        root.lastError = ""
+        root.dataSource = source
+        root.lastUpdated = Qt.formatDateTime(new Date(), "hh:mm")
+        root.checkNotifications()
+    }
     function applyUsage(parsed, source) {
         if (root.activeTab === 0) root.claudeUsage = parsed
         else root.clineUsage = parsed
@@ -380,6 +414,7 @@ PlasmoidItem {
         eventId: "notification"
         title: {
             if (root.agentService === 2) return i18n("Usage high")
+            if (root.agentService === 3) return i18n("Antigravity usage high")
             return root.agentService === 1 ? i18n("Cline usage high")
                                            : i18n("Claude usage high")
         }
@@ -420,6 +455,10 @@ PlasmoidItem {
         if (root.agentService === 1) {
             executable.exec("bash " + JSON.stringify(root.fetchClineScript))
             executable.exec("bash -lc " + JSON.stringify("cat \"$HOME/.cline/data/settings/providers.json\""))
+            return
+        }
+        if (root.agentService === 3) {
+            executable.exec("bash " + JSON.stringify(root.fetchAntigravityScript))
             return
         }
         if (sourceMode === 2) {

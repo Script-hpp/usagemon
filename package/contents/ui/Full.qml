@@ -41,6 +41,7 @@ ColumnLayout {
                 text: {
                     if (root.agentService === 2)
                         return root.activeTab === 0 ? i18n("usagemon — Claude") : i18n("usagemon — Cline")
+                    if (root.agentService === 3) return i18n("usagemon — Antigravity")
                     return root.agentService === 1 ? i18n("usagemon — Cline") : i18n("usagemon")
                 }
                 Layout.fillWidth: true

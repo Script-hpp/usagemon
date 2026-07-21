@@ -22,7 +22,8 @@ Kirigami.FormLayout {
         model: [
             i18n("Claude Code"),
             i18n("Cline"),
-            i18n("Both")
+            i18n("Both"),
+            i18n("Antigravity")
         ]
     }
 
@@ -65,6 +66,16 @@ Kirigami.FormLayout {
         opacity: 0.7
         font: Kirigami.Theme.smallFont
         text: i18n("Both: parallel Claude Code + Cline display. Claude uses the OAuth API (or CLI if configured), Cline uses its own API. Click the panel to switch between details in the popup.")
+    }
+
+    QQC2.Label {
+        Kirigami.FormData.label: ""
+        visible: serviceCombo.currentIndex === 3
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 18
+        wrapMode: Text.WordWrap
+        opacity: 0.7
+        font: Kirigami.Theme.smallFont
+        text: i18n("Antigravity reads quota from the local agy CLI's loopback server — it reuses an already-running agy session if found, otherwise launches one briefly just to read quota. No Google account credentials are touched. Requires agy and lsof on PATH.")
     }
 
     QQC2.TextField {
