@@ -103,6 +103,7 @@ Item {
                 // SVG renders as-is; the percentage label already carries the
                 // severity colour. The active tab icon is opaque, inactive is dimmed.
                 Image {
+                    visible: plasmoid.configuration.showPanelIcon
                     source: Qt.resolvedUrl("../icons/" + modelData.icon)
                     sourceSize.width: Kirigami.Units.iconSizes.small
                     sourceSize.height: Kirigami.Units.iconSizes.small
@@ -128,6 +129,7 @@ Item {
 
         // Brand icon from Lobe Icons project (MIT, github.com/lobehub/lobe-icons).
         Image {
+            visible: plasmoid.configuration.showPanelIcon
             source: Qt.resolvedUrl("../icons/" + compact.singleModeIcon)
             sourceSize.width: Kirigami.Units.iconSizes.small
             sourceSize.height: Kirigami.Units.iconSizes.small

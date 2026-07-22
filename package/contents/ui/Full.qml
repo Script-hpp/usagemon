@@ -91,7 +91,7 @@ ColumnLayout {
                 }
 
                 Image {
-                    visible: parent.shownModel.length > 0
+                    visible: parent.shownModel.length > 0 && plasmoid.configuration.showPopupIcon
                     source: Qt.resolvedUrl("../icons/" + parent.modelIcon)
                     sourceSize.width: Kirigami.Units.iconSizes.small
                     sourceSize.height: Kirigami.Units.iconSizes.small

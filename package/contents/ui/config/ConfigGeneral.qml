@@ -11,6 +11,8 @@ Kirigami.FormLayout {
     property alias cfg_warnThreshold: warnThresholdSpin.value
     property alias cfg_criticalThreshold: criticalThresholdSpin.value
     property alias cfg_widePopup: widePopupCheck.checked
+    property alias cfg_showPanelIcon: showPanelIconCheck.checked
+    property alias cfg_showPopupIcon: showPopupIconCheck.checked
     property alias cfg_dataSourceMode: sourceCombo.currentIndex
     // agentService's stored int (0=Claude, 1=Cline, 2=All, 3=Antigravity) is
     // fixed by the rest of the widget; valueRole lets the dropdown show a
@@ -94,6 +96,17 @@ Kirigami.FormLayout {
         id: widePopupCheck
         Kirigami.FormData.label: i18n("Popup:")
         text: i18n("Wider layout (show full reset time)")
+    }
+
+    QQC2.CheckBox {
+        id: showPanelIconCheck
+        Kirigami.FormData.label: i18n("Vendor logo:")
+        text: i18n("Show in panel")
+    }
+
+    QQC2.CheckBox {
+        id: showPopupIconCheck
+        text: i18n("Show in popup")
     }
 
     QQC2.SpinBox {
